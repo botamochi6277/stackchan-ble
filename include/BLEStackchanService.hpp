@@ -4,11 +4,17 @@
 #define BLE_STACKCHAN_SERVICE_HPP
 
 #include <ArduinoBLE.h>
+#include <ESP32Servo.h>
 
 #include "BLEFormat.hpp"
 #include "BLEUnit.hpp"
 
 namespace ble {
+
+struct Limitation {
+  uint8_t min;
+  uint8_t max;
+};
 
 class StackchanService : public BLEService {
  private:
@@ -29,6 +35,10 @@ class StackchanService : public BLEService {
                                   0x00};
 
  public:
+  Limitation pan_limit;
+  Limitation tilt_limit;
+
+  //  characteristics
   BLEUnsignedLongCharacteristic timer_chr;
 
   // facial
@@ -42,6 +52,8 @@ class StackchanService : public BLEService {
   StackchanService(/* args */);
   // ~StackchanService();
   void setInitialValues();
+  void servoPoll(Servo &servo_pan, Servo &servo_tilt, uint8_t pan_pin = 32,
+                 uint8_t tilt_pin = 33);
 };
 
 StackchanService::StackchanService()
@@ -77,6 +89,43 @@ void StackchanService::setInitialValues() {
   this->servo_pan_angle_chr.writeValue(90U);
   this->servo_tilt_angle_chr.writeValue(90U);
 };
+
+void StackchanService::servoPoll(Servo &servo_pan, Servo &servo_tilt,
+                                 uint8_t pan_pin, uint8_t tilt_pin) {
+  if (this->is_servo_activated_chr.written()) {
+    if (this->is_servo_activated_chr.value()) {
+      // activate servo
+      servo_pan.attach(pan_pin);
+      servo_tilt.attach(tilt_pin);
+    } else {
+      servo_pan.detach();
+      servo_pan.detach();
+    }
+  }
+
+  if (this->is_servo_activated_chr.value()) {
+    if (this->servo_pan_angle_chr.written()) {
+      auto angle = this->servo_pan_angle_chr.value();
+      if (angle < this->pan_limit.min) {
+        angle = this->pan_limit.min;
+      }
+      if (this->pan_limit.max < angle) {
+        angle = this->pan_limit.max;
+      }
+      servo_pan.write(angle);
+    }
+    if (this->servo_tilt_angle_chr.written()) {
+      auto angle = this->servo_tilt_angle_chr.value();
+      if (angle < this->tilt_limit.min) {
+        angle = this->tilt_limit.min;
+      }
+      if (this->tilt_limit.max < angle) {
+        angle = this->tilt_limit.max;
+      }
+      servo_tilt.write(angle);
+    }
+  }
+}
 
 }  // namespace ble
 #endif
