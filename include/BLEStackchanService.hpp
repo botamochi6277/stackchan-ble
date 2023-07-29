@@ -1,0 +1,82 @@
+// BLE service for stackchan
+
+#ifndef BLE_STACKCHAN_SERVICE_HPP
+#define BLE_STACKCHAN_SERVICE_HPP
+
+#include <ArduinoBLE.h>
+
+#include "BLEFormat.hpp"
+#include "BLEUnit.hpp"
+
+namespace ble {
+
+class StackchanService : public BLEService {
+ private:
+  const uint8_t msec_format_[7] = {
+      BLE_GATT_CPF_FORMAT_UINT64,
+      0b11111101,                             // exp, milli, -3
+      (uint8_t)BLE_GATT_CPF_UNIT_SEC,         // 0x13
+      (uint8_t)(BLE_GATT_CPF_UNIT_SEC >> 8),  // 0x27
+      0x01,
+      0x00,
+      0x00};
+  const uint8_t deg_format_[7] = {BLE_GATT_CPF_FORMAT_UINT64,
+                                  0,
+                                  (uint8_t)BLE_GATT_CPF_UNIT_DEGREE,
+                                  (uint8_t)(BLE_GATT_CPF_UNIT_DEGREE >> 8),
+                                  0x01,
+                                  0x00,
+                                  0x00};
+
+ public:
+  BLEUnsignedLongCharacteristic timer_chr;
+
+  // facial
+  // pass
+
+  // servo
+  BLEBooleanCharacteristic is_servo_activated_chr;
+  BLEUnsignedCharCharacteristic servo_pan_angle_chr;
+  BLEUnsignedCharCharacteristic servo_tilt_angle_chr;
+
+  StackchanService(/* args */);
+  // ~StackchanService();
+  void setInitialValues();
+};
+
+StackchanService::StackchanService()
+    : BLEService("671e0000-8cef-46b7-8af3-2eddeb12803e"),
+      timer_chr("671e0001-8cef-46b7-8af3-2eddeb12803e", BLERead | BLENotify),
+      is_servo_activated_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
+                             BLERead | BLEWrite),
+      servo_pan_angle_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
+                          BLERead | BLEWrite),
+      servo_tilt_angle_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
+                           BLERead | BLEWrite) {
+  // add characteristics to service
+  this->addCharacteristic(this->timer_chr);
+  this->addCharacteristic(this->is_servo_activated_chr);
+  this->addCharacteristic(this->servo_pan_angle_chr);
+  this->addCharacteristic(this->servo_tilt_angle_chr);
+
+  // User Description
+  BLEDescriptor timer_descriptor("2901", "timer_ms");
+  this->timer_chr.addDescriptor(timer_descriptor);
+
+  BLEDescriptor pwr_descriptor("2901", "is_servo_activated");
+  this->is_servo_activated_chr.addDescriptor(pwr_descriptor);
+  BLEDescriptor pan_descriptor("2901", "pan angle [deg]");
+  this->servo_pan_angle_chr.addDescriptor(pan_descriptor);
+  BLEDescriptor tilt_descriptor("2901", "tilt angle [deg]");
+  this->servo_tilt_angle_chr.addDescriptor(tilt_descriptor);
+};
+
+void StackchanService::setInitialValues() {
+  this->timer_chr.writeValue(0U);
+  this->is_servo_activated_chr.writeValue(false);
+  this->servo_pan_angle_chr.writeValue(90U);
+  this->servo_tilt_angle_chr.writeValue(90U);
+};
+
+}  // namespace ble
+#endif
