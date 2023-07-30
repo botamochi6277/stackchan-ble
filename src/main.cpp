@@ -17,6 +17,13 @@ uint8_t tilt_max = 100;
 float time_sec = 0.0f;
 unsigned long milli_sec = 0U;
 
+const m5avatar::Expression expressions[] = {
+    m5avatar::Expression::Angry, m5avatar::Expression::Sleepy,
+    m5avatar::Expression::Happy, m5avatar::Expression::Sad,
+    m5avatar::Expression::Doubt, m5avatar::Expression::Neutral};
+const uint8_t expressions_size = 6;
+m5avatar::Expression current_expression = expressions[0];
+
 void sweepUpdate(Servo& servo, float t, float f, float amp = 90.0f,
                  int offset = 90) {
   int angle = static_cast<int>(amp * sin(2.0f * M_PI * f * t)) + offset;
@@ -66,6 +73,8 @@ void loop() {
   BLE.poll();
 
   stackchan_srv.servoPoll(servo_pan, servo_tilt);
+  stackchan_srv.facePoll(avatar, expressions, expressions_size);
+
   // time_sec = millis() * 1.0e-3f;
 
   delay(10);
