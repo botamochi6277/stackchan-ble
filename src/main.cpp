@@ -18,9 +18,9 @@ float time_sec = 0.0f;
 unsigned long milli_sec = 0U;
 
 const m5avatar::Expression expressions[] = {
-    m5avatar::Expression::Angry, m5avatar::Expression::Sleepy,
-    m5avatar::Expression::Happy, m5avatar::Expression::Sad,
-    m5avatar::Expression::Doubt, m5avatar::Expression::Neutral};
+    m5avatar::Expression::Neutral, m5avatar::Expression::Happy,
+    m5avatar::Expression::Angry,   m5avatar::Expression::Sad,
+    m5avatar::Expression::Sleepy,  m5avatar::Expression::Doubt};
 const uint8_t expressions_size = 6;
 m5avatar::Expression current_expression = expressions[0];
 
