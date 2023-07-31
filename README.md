@@ -1,5 +1,7 @@
 # Stackchan BLE
 
+[![PlatformIO Build](https://github.com/botamochi6277/stackchan-ble/actions/workflows/ci-platformio.yml/badge.svg?branch=main)](https://github.com/botamochi6277/stackchan-ble/actions/workflows/ci-platformio.yml)
+
 Super kawaii stackchan controlled with BLE
 
 ```mermaid
