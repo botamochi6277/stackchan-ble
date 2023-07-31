@@ -45,6 +45,7 @@ class StackchanService : public BLEService {
   // facial
   BLEUnsignedCharCharacteristic facial_expression_chr;
   BLEUnsignedCharCharacteristic facial_color_chr;
+  BLEUnsignedCharCharacteristic mouse_open_ratio_chr;
 
   // servo
   BLEBooleanCharacteristic is_servo_activated_chr;
@@ -64,6 +65,8 @@ class StackchanService : public BLEService {
   void facialColorPoll(m5avatar::Avatar &avatar,
                        m5avatar::ColorPalette *palettes[],
                        uint8_t palette_size);
+
+  void mouseOpenPoll(m5avatar::Avatar &avatar);
 };
 
 StackchanService::StackchanService()
@@ -73,6 +76,8 @@ StackchanService::StackchanService()
                             BLERead | BLEWrite),
       facial_color_chr("671e1002-8cef-46b7-8af3-2eddeb12803e",
                        BLERead | BLEWrite),
+      mouse_open_ratio_chr("671e1003-8cef-46b7-8af3-2eddeb12803e",
+                           BLERead | BLEWrite),
       is_servo_activated_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
                              BLERead | BLEWrite),
       servo_pan_angle_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
@@ -83,6 +88,7 @@ StackchanService::StackchanService()
   this->addCharacteristic(this->timer_chr);
   this->addCharacteristic(this->facial_expression_chr);
   this->addCharacteristic(this->facial_color_chr);
+  this->addCharacteristic(this->mouse_open_ratio_chr);
   this->addCharacteristic(this->is_servo_activated_chr);
   this->addCharacteristic(this->servo_pan_angle_chr);
   this->addCharacteristic(this->servo_tilt_angle_chr);
@@ -95,6 +101,8 @@ StackchanService::StackchanService()
   this->facial_expression_chr.addDescriptor(facial_descriptor);
   BLEDescriptor facial_color_descriptor("2901", "facial color");
   this->facial_color_chr.addDescriptor(facial_color_descriptor);
+  BLEDescriptor mouse_or_descriptor("2901", "mouse open ratio");
+  this->mouse_open_ratio_chr.addDescriptor(mouse_or_descriptor);
 
   BLEDescriptor pwr_descriptor("2901", "is_servo_activated");
   this->is_servo_activated_chr.addDescriptor(pwr_descriptor);
@@ -179,6 +187,13 @@ void StackchanService::facialColorPoll(m5avatar::Avatar &avatar,
       return;  // out of index
     }
     avatar.setColorPalette(*palettes[idx]);
+  }
+}
+
+void StackchanService::mouseOpenPoll(m5avatar::Avatar &avatar) {
+  if (this->mouse_open_ratio_chr.written()) {
+    avatar.setMouthOpenRatio(
+        static_cast<float>(this->mouse_open_ratio_chr.value()) / 255U);
   }
 }
 

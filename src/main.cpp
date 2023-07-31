@@ -91,6 +91,8 @@ void loop() {
   stackchan_srv.servoPoll(servo_pan, servo_tilt);
   stackchan_srv.facialExpressionPoll(avatar, expressions, expressions_size);
   stackchan_srv.facialColorPoll(avatar, color_palettes, color_palettes_size);
+  stackchan_srv.mouseOpenPoll(avatar);
+
   if (M5.BtnB.wasPressed()) {
     avatar.setColorPalette(*color_palettes[color_palettes_idx]);
     // have no effect on written flag
