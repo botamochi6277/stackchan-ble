@@ -25,9 +25,8 @@ const uint8_t expressions_size = 6;
 m5avatar::Expression current_expression = expressions[0];
 
 m5avatar::ColorPalette* color_palettes[4];
-const int color_palettes_size =
-    sizeof(color_palettes) / sizeof(m5avatar::ColorPalette*);
-int color_palettes_idx = 0;
+const uint8_t color_palettes_size = 4U;
+uint8_t color_palettes_idx = 0;
 
 void sweepUpdate(Servo& servo, float t, float f, float amp = 90.0f,
                  int offset = 90) {
@@ -90,9 +89,12 @@ void loop() {
   BLE.poll();
 
   stackchan_srv.servoPoll(servo_pan, servo_tilt);
-  stackchan_srv.facePoll(avatar, expressions, expressions_size);
+  stackchan_srv.facialExpressionPoll(avatar, expressions, expressions_size);
+  stackchan_srv.facialColorPoll(avatar, color_palettes, color_palettes_size);
   if (M5.BtnB.wasPressed()) {
     avatar.setColorPalette(*color_palettes[color_palettes_idx]);
+    // have no effect on written flag
+    // stackchan_srv.facial_color_chr.writeValue(color_palettes_idx);
     color_palettes_idx = (color_palettes_idx + 1) % color_palettes_size;
   }
   // time_sec = millis() * 1.0e-3f;

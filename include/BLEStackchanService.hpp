@@ -44,6 +44,7 @@ class StackchanService : public BLEService {
 
   // facial
   BLEUnsignedCharCharacteristic facial_expression_chr;
+  BLEUnsignedCharCharacteristic facial_color_chr;
 
   // servo
   BLEBooleanCharacteristic is_servo_activated_chr;
@@ -56,9 +57,13 @@ class StackchanService : public BLEService {
   void servoPoll(Servo &servo_pan, Servo &servo_tilt, uint8_t pan_pin = 32,
                  uint8_t tilt_pin = 33);
 
-  void facePoll(m5avatar::Avatar &avatar,
-                const m5avatar::Expression expressions[],
-                uint8_t expression_size);
+  void facialExpressionPoll(m5avatar::Avatar &avatar,
+                            const m5avatar::Expression expressions[],
+                            uint8_t expression_size);
+
+  void facialColorPoll(m5avatar::Avatar &avatar,
+                       m5avatar::ColorPalette *palettes[],
+                       uint8_t palette_size);
 };
 
 StackchanService::StackchanService()
@@ -66,6 +71,8 @@ StackchanService::StackchanService()
       timer_chr("671e0001-8cef-46b7-8af3-2eddeb12803e", BLERead | BLENotify),
       facial_expression_chr("671e1000-8cef-46b7-8af3-2eddeb12803e",
                             BLERead | BLEWrite),
+      facial_color_chr("671e1002-8cef-46b7-8af3-2eddeb12803e",
+                       BLERead | BLEWrite),
       is_servo_activated_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
                              BLERead | BLEWrite),
       servo_pan_angle_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
@@ -75,6 +82,7 @@ StackchanService::StackchanService()
   // add characteristics to service
   this->addCharacteristic(this->timer_chr);
   this->addCharacteristic(this->facial_expression_chr);
+  this->addCharacteristic(this->facial_color_chr);
   this->addCharacteristic(this->is_servo_activated_chr);
   this->addCharacteristic(this->servo_pan_angle_chr);
   this->addCharacteristic(this->servo_tilt_angle_chr);
@@ -85,6 +93,8 @@ StackchanService::StackchanService()
 
   BLEDescriptor facial_descriptor("2901", "facial expression");
   this->facial_expression_chr.addDescriptor(facial_descriptor);
+  BLEDescriptor facial_color_descriptor("2901", "facial color");
+  this->facial_color_chr.addDescriptor(facial_color_descriptor);
 
   BLEDescriptor pwr_descriptor("2901", "is_servo_activated");
   this->is_servo_activated_chr.addDescriptor(pwr_descriptor);
@@ -147,9 +157,9 @@ void StackchanService::servoPoll(Servo &servo_pan, Servo &servo_tilt,
   }
 }
 
-void StackchanService::facePoll(m5avatar::Avatar &avatar,
-                                const m5avatar::Expression expressions[],
-                                uint8_t expression_size) {
+void StackchanService::facialExpressionPoll(
+    m5avatar::Avatar &avatar, const m5avatar::Expression expressions[],
+    uint8_t expression_size) {
   if (this->facial_expression_chr.written()) {
     auto idx = this->facial_expression_chr.value();
     if (expression_size <= idx) {
@@ -157,6 +167,18 @@ void StackchanService::facePoll(m5avatar::Avatar &avatar,
     }
 
     avatar.setExpression(expressions[idx]);
+  }
+}
+
+void StackchanService::facialColorPoll(m5avatar::Avatar &avatar,
+                                       m5avatar::ColorPalette *palettes[],
+                                       uint8_t palette_size) {
+  if (this->facial_color_chr.written()) {
+    auto idx = this->facial_color_chr.value();
+    if (palette_size <= idx) {
+      return;  // out of index
+    }
+    avatar.setColorPalette(*palettes[idx]);
   }
 }
 
