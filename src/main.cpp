@@ -24,6 +24,11 @@ const m5avatar::Expression expressions[] = {
 const uint8_t expressions_size = 6;
 m5avatar::Expression current_expression = expressions[0];
 
+m5avatar::ColorPalette* color_palettes[4];
+const int color_palettes_size =
+    sizeof(color_palettes) / sizeof(m5avatar::ColorPalette*);
+int color_palettes_idx = 0;
+
 void sweepUpdate(Servo& servo, float t, float f, float amp = 90.0f,
                  int offset = 90) {
   int angle = static_cast<int>(amp * sin(2.0f * M_PI * f * t)) + offset;
@@ -45,6 +50,18 @@ void setup() {
   stackchan_srv.tilt_limit.max = 100;
 
   M5.begin();
+
+  color_palettes[0] = new m5avatar::ColorPalette();
+  color_palettes[1] = new m5avatar::ColorPalette();
+  color_palettes[2] = new m5avatar::ColorPalette();
+  color_palettes[3] = new m5avatar::ColorPalette();
+  color_palettes[1]->set(COLOR_PRIMARY, TFT_YELLOW);
+  color_palettes[1]->set(COLOR_BACKGROUND, TFT_DARKCYAN);
+  color_palettes[2]->set(COLOR_PRIMARY, TFT_DARKGREY);
+  color_palettes[2]->set(COLOR_BACKGROUND, TFT_WHITE);
+  color_palettes[3]->set(COLOR_PRIMARY, TFT_RED);
+  color_palettes[3]->set(COLOR_BACKGROUND, TFT_PINK);
+
   avatar.init();  // start drawing
 
   if (!BLE.begin()) {
@@ -67,14 +84,17 @@ void setup() {
 void loop() {
   // avatar's face updates in another thread
   // so no need to loop-by-loop rendering
-
+  M5.update();
   milli_sec = millis();
   stackchan_srv.timer_chr.writeValue(milli_sec);
   BLE.poll();
 
   stackchan_srv.servoPoll(servo_pan, servo_tilt);
   stackchan_srv.facePoll(avatar, expressions, expressions_size);
-
+  if (M5.BtnB.wasPressed()) {
+    avatar.setColorPalette(*color_palettes[color_palettes_idx]);
+    color_palettes_idx = (color_palettes_idx + 1) % color_palettes_size;
+  }
   // time_sec = millis() * 1.0e-3f;
 
   delay(10);
