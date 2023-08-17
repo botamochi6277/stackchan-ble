@@ -47,13 +47,13 @@ Central---|BLE|stackchan_service
     },
     {
       "name": "servo_pan_angle_chr",
-      "uuid": "671e2000-8cef-46b7-8af3-2eddeb12803e",
+      "uuid": "671e2001-8cef-46b7-8af3-2eddeb12803e",
       "data_type": "UnsignedChar",
       "properties": ["Read", "Write"]
     },
     {
       "name": "servo_tilt_angle_chr",
-      "uuid": "671e2000-8cef-46b7-8af3-2eddeb12803e",
+      "uuid": "671e2002-8cef-46b7-8af3-2eddeb12803e",
       "data_type": "UnsignedChar",
       "properties": ["Read", "Write"]
     }

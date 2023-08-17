@@ -80,9 +80,9 @@ StackchanService::StackchanService()
                            BLERead | BLEWrite),
       is_servo_activated_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
                              BLERead | BLEWrite),
-      servo_pan_angle_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
+      servo_pan_angle_chr("671e2001-8cef-46b7-8af3-2eddeb12803e",
                           BLERead | BLEWrite),
-      servo_tilt_angle_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
+      servo_tilt_angle_chr("671e2002-8cef-46b7-8af3-2eddeb12803e",
                            BLERead | BLEWrite) {
   // add characteristics to service
   this->addCharacteristic(this->timer_chr);
