@@ -27,10 +27,18 @@ class StackchanService : public BLEService {
       0x01,
       0x00,
       0x00};
-  const uint8_t deg_format_[7] = {BLE_GATT_CPF_FORMAT_UINT64,
+  const uint8_t deg_format_[7] = {BLE_GATT_CPF_FORMAT_UINT8,
                                   0,
                                   (uint8_t)BLE_GATT_CPF_UNIT_DEGREE,
                                   (uint8_t)(BLE_GATT_CPF_UNIT_DEGREE >> 8),
+                                  0x01,
+                                  0x00,
+                                  0x00};
+
+  const uint8_t cmd_format_[7] = {BLE_GATT_CPF_FORMAT_UINT8,
+                                  0,
+                                  (uint8_t)BLE_GATT_CPF_UNIT_UNITLESS,
+                                  (uint8_t)(BLE_GATT_CPF_UNIT_UNITLESS >> 8),
                                   0x01,
                                   0x00,
                                   0x00};
@@ -115,6 +123,17 @@ StackchanService::StackchanService()
   BLEDescriptor millisec_descriptor("2904", this->msec_format_, 7);
   this->timer_chr.addDescriptor(millisec_descriptor);
 
+  BLEDescriptor facial_exp_descriptor("2904", this->cmd_format_, 7);
+  this->facial_expression_chr.addDescriptor(facial_exp_descriptor);
+
+  BLEDescriptor facial_color_fmt_descriptor("2904", this->cmd_format_, 7);
+  this->facial_color_chr.addDescriptor(facial_color_fmt_descriptor);
+
+  BLEDescriptor mouse_open_descriptor("2904", this->cmd_format_, 7);
+  this->mouse_open_ratio_chr.addDescriptor(mouse_open_descriptor);
+
+  BLEDescriptor servo_activate_descriptor("2904", this->cmd_format_, 7);
+  this->is_servo_activated_chr.addDescriptor(servo_activate_descriptor);
   BLEDescriptor angle_pan_descriptor01("2904", this->deg_format_, 7);
   this->servo_pan_angle_chr.addDescriptor(angle_pan_descriptor01);
   BLEDescriptor angle_tilt_descriptor01("2904", this->deg_format_, 7);
