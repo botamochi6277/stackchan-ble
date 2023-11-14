@@ -42,6 +42,13 @@ class StackchanService : public BLEService {
                                   0x01,
                                   0x00,
                                   0x00};
+  const uint8_t rgb_format_[7] = {BLE_GATT_CPF_FORMAT_UINT32,
+                                  0,
+                                  (uint8_t)BLE_GATT_CPF_UNIT_RGB,
+                                  (uint8_t)(BLE_GATT_CPF_UNIT_RGB >> 8),
+                                  0x01,
+                                  0x00,
+                                  0x00};
 
  public:
   Limitation pan_limit;
@@ -54,6 +61,12 @@ class StackchanService : public BLEService {
   BLEUnsignedCharCharacteristic facial_expression_chr;
   BLEUnsignedCharCharacteristic facial_color_chr;
   BLEUnsignedCharCharacteristic mouse_open_ratio_chr;
+
+  BLEUnsignedIntCharacteristic primary_color_chr;
+  // (todo) secondary color
+  BLEUnsignedIntCharacteristic background_color_chr;
+  // (todo) balloon foreground
+  // (todo) balloon background
 
   // servo
   BLEBooleanCharacteristic is_servo_activated_chr;
@@ -86,6 +99,10 @@ StackchanService::StackchanService()
                        BLERead | BLEWrite),
       mouse_open_ratio_chr("671e1003-8cef-46b7-8af3-2eddeb12803e",
                            BLERead | BLEWrite),
+      primary_color_chr("671e1004-8cef-46b7-8af3-2eddeb12803e",
+                        BLERead | BLEWrite),
+      background_color_chr("671e1005-8cef-46b7-8af3-2eddeb12803e",
+                           BLERead | BLEWrite),
       is_servo_activated_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
                              BLERead | BLEWrite),
       servo_pan_angle_chr("671e2001-8cef-46b7-8af3-2eddeb12803e",
@@ -97,6 +114,8 @@ StackchanService::StackchanService()
   this->addCharacteristic(this->facial_expression_chr);
   this->addCharacteristic(this->facial_color_chr);
   this->addCharacteristic(this->mouse_open_ratio_chr);
+  this->addCharacteristic(this->primary_color_chr);
+  this->addCharacteristic(this->background_color_chr);
   this->addCharacteristic(this->is_servo_activated_chr);
   this->addCharacteristic(this->servo_pan_angle_chr);
   this->addCharacteristic(this->servo_tilt_angle_chr);
@@ -111,6 +130,11 @@ StackchanService::StackchanService()
   this->facial_color_chr.addDescriptor(facial_color_descriptor);
   BLEDescriptor mouse_or_descriptor("2901", "mouse open ratio");
   this->mouse_open_ratio_chr.addDescriptor(mouse_or_descriptor);
+
+  BLEDescriptor primary_color_descriptor("2901", "primary color");
+  this->primary_color_chr.addDescriptor(primary_color_descriptor);
+  BLEDescriptor bg_color_descriptor("2901", "background color");
+  this->background_color_chr.addDescriptor(bg_color_descriptor);
 
   BLEDescriptor pwr_descriptor("2901", "is_servo_activated");
   this->is_servo_activated_chr.addDescriptor(pwr_descriptor);
@@ -129,6 +153,11 @@ StackchanService::StackchanService()
   BLEDescriptor facial_color_fmt_descriptor("2904", this->cmd_format_, 7);
   this->facial_color_chr.addDescriptor(facial_color_fmt_descriptor);
 
+  BLEDescriptor primary_color_fmt_descriptor("2904", this->rgb_format_, 7);
+  this->primary_color_chr.addDescriptor(primary_color_fmt_descriptor);
+  BLEDescriptor bg_color_fmt_descriptor("2904", this->rgb_format_, 7);
+  this->background_color_chr.addDescriptor(bg_color_fmt_descriptor);
+
   BLEDescriptor mouse_open_descriptor("2904", this->cmd_format_, 7);
   this->mouse_open_ratio_chr.addDescriptor(mouse_open_descriptor);
 
@@ -140,11 +169,29 @@ StackchanService::StackchanService()
   this->servo_tilt_angle_chr.addDescriptor(angle_tilt_descriptor01);
 };
 
+u_int16_t to16bitscolor(u_int32_t color) {
+  // https://docs.arduino.cc/library-examples/tft-library/TFTColorPicker
+  u_int8_t r = (0x00FF0000 & color) >> 16;
+  u_int8_t g = (0x0000FF00 & color) >> 8;
+  u_int8_t b = (0x000000FF & color);
+
+  // 5bits red and blue
+  r = 0b11111 * (static_cast<float>(r) / 255.0f);
+  b = 0b11111 * (static_cast<float>(b) / 255.0f);
+  // 6bits green
+  g = 0b111111 * (static_cast<float>(g) / 255.0f);
+
+  return r << 11 | g << 5 | b;
+}
+
 void StackchanService::setInitialValues() {
   this->timer_chr.writeValue(0U);
   this->is_servo_activated_chr.writeValue(false);
   this->servo_pan_angle_chr.writeValue(90U);
   this->servo_tilt_angle_chr.writeValue(90U);
+
+  this->primary_color_chr.writeValueLE(0xffffff);
+  this->background_color_chr.writeValueLE(0x000000);
 };
 
 void StackchanService::servoPoll(Servo &servo_pan, Servo &servo_tilt,
@@ -205,6 +252,17 @@ void StackchanService::facialColorPoll(m5avatar::Avatar &avatar,
     if (palette_size <= idx) {
       return;  // out of index
     }
+    avatar.setColorPalette(*palettes[idx]);
+  }
+
+  if (this->primary_color_chr.written() ||
+      this->background_color_chr.written()) {
+    auto idx = this->facial_color_chr.value();
+    // convert 24 bit color to 16bit color
+    palettes[idx]->set(COLOR_PRIMARY,
+                       to16bitscolor(this->primary_color_chr.valueLE()));
+    palettes[idx]->set(COLOR_BACKGROUND,
+                       to16bitscolor(this->background_color_chr.valueLE()));
     avatar.setColorPalette(*palettes[idx]);
   }
 }
