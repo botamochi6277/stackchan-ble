@@ -95,6 +95,10 @@ class FbkMouth : public Drawable {
     // mask for omega
     spi->fillRect(cx - maxWidth / 2, cy - maxHeight * 1.5, maxWidth, maxHeight,
                   backgroundColor);
+
+    // cheek
+    spi->fillEllipse(cx - 132, cy - 23, 24, 10, COLOR_SECONDARY);
+    spi->fillEllipse(cx + 132, cy - 23, 24, 10, COLOR_SECONDARY);
   }
 };
 
