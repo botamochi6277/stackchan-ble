@@ -76,3 +76,15 @@ Temporary Items
 !.vscode/extensions.json
 
 
+# SCS library
+include/INST.h
+include/SCS.h
+include/SCSCL.h
+include/SCSerial.h
+include/SCServo.h
+include/SMS_STS.h
+
+src/SCS.cpp
+src/SCSCL.cpp
+src/SCSerial.cpp
+src/SMS_STS.cpp
