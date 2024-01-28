@@ -51,16 +51,48 @@ m5avatar::Face* faces[3];
 const int faces_length = sizeof(faces) / sizeof(m5avatar::Face*);
 int face_idx = 0;
 
+// TODO: remove delay in func
+void demo() {
+  delay(3000);  // timer
+  servo_tilt.write(90 - 10);
+  delay(1000);
+  // nod yes
+  for (size_t i = 0; i < 2; i++) {
+    servo_tilt.write(90 - 30);
+    delay(500);
+    servo_tilt.write(90 + 10);
+    delay(500);
+  }
+  servo_tilt.write(90 - 10);
+  delay(1000);
+  // no,no
+
+  for (size_t i = 0; i < 2; i++) {
+    servo_pan.write(90 - 30);
+    delay(500);
+    servo_pan.write(90 + 30);
+    delay(500);
+  }
+  servo_pan.write(90);
+  delay(1000);
+
+  for (size_t i = 0; i < 10; i++) {
+    M5.update();
+    avatar.setMouthOpenRatio(static_cast<float>(i / 10.0f));
+    delay(10);
+  }
+  for (size_t i = 0; i < 10; i++) {
+    M5.update();
+    avatar.setMouthOpenRatio(1.0f - static_cast<float>(i / 10.0f));
+    delay(100);
+  }
+}
+
 void setup() {
 #ifdef FEETECH
   Serial1.begin(1000000, SERIAL_8N1, 19, 27);
   st.pSerial = &Serial1;
 #endif
-
-  stackchan_srv.pan_limit.min = 60 + 90;
-  stackchan_srv.pan_limit.max = 90 + 90;
-  stackchan_srv.tilt_limit.min = 80 + 90;
-  stackchan_srv.tilt_limit.max = 100 + 90;
 
   M5.begin();
 
@@ -157,6 +189,11 @@ void loop() {
     // stackchan_srv.facial_color_chr.writeValue(color_palettes_idx);
     color_palettes_idx = (color_palettes_idx + 1) % color_palettes_size;
   }
+#ifndef FEETECH
+  if (M5.BtnC.wasPressed()) {
+    demo();
+  }
+#endif
   // time_sec = millis() * 1.0e-3f;
 
   delay(10);

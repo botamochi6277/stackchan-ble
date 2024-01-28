@@ -8,7 +8,12 @@
 
 #include "BLEFormat.hpp"
 #include "BLEUnit.hpp"
+
+#ifdef FEETECH
 #include "SCServo.h"
+#else
+#include <ESP32Servo.h>
+#endif
 
 namespace color {
 u_int16_t to16bitscolor(u_int32_t color) {
@@ -93,8 +98,15 @@ class StackchanService : public BLEService {
   StackchanService(/* args */);
   // ~StackchanService();
   void setInitialValues();
+
+#ifdef FEETECH
   void servoPoll(SMS_STS &sts, uint8_t pan_id = 0, uint8_t tilt_id = 1,
                  unsigned short speed = 3400, unsigned acc = 50);
+
+#else
+  void servoPoll(Servo &servo_pan, Servo &servo_tilt, uint8_t pan_pin = 32,
+                 uint8_t tilt_pin = 33);
+#endif
 
   void facialExpressionPoll(m5avatar::Avatar &avatar,
                             const m5avatar::Expression expressions[],
@@ -196,6 +208,7 @@ void StackchanService::setInitialValues() {
   this->background_color_chr.writeValueLE(0x000000);
 };
 
+#ifdef FEETECH
 void StackchanService::servoPoll(SMS_STS &sts, uint8_t pan_id, uint8_t tilt_id,
                                  unsigned short speed, unsigned acc) {
   if (this->is_servo_activated_chr.written()) {
@@ -234,7 +247,45 @@ void StackchanService::servoPoll(SMS_STS &sts, uint8_t pan_id, uint8_t tilt_id,
     sts.RegWriteAction();
   }
 }
+#else
+void StackchanService::servoPoll(Servo &servo_pan, Servo &servo_tilt,
+                                 uint8_t pan_pin, uint8_t tilt_pin) {
+  if (this->is_servo_activated_chr.written()) {
+    if (this->is_servo_activated_chr.value()) {
+      // activate servo
+      servo_pan.attach(pan_pin);
+      servo_tilt.attach(tilt_pin);
+    } else {
+      servo_pan.detach();
+      servo_pan.detach();
+    }
+  }
 
+  if (this->is_servo_activated_chr.value()) {
+    if (this->servo_pan_angle_chr.written()) {
+      auto angle = this->servo_pan_angle_chr.value();
+      if (angle < this->pan_limit.min) {
+        angle = this->pan_limit.min;
+      }
+      if (this->pan_limit.max < angle) {
+        angle = this->pan_limit.max;
+      }
+      servo_pan.write(angle);
+    }
+    if (this->servo_tilt_angle_chr.written()) {
+      auto angle = this->servo_tilt_angle_chr.value();
+      if (angle < this->tilt_limit.min) {
+        angle = this->tilt_limit.min;
+      }
+      if (this->tilt_limit.max < angle) {
+        angle = this->tilt_limit.max;
+      }
+      servo_tilt.write(angle);
+    }
+  }
+}
+
+#endif
 void StackchanService::facialExpressionPoll(
     m5avatar::Avatar &avatar, const m5avatar::Expression expressions[],
     uint8_t expression_size) {
