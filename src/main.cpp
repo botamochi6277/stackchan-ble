@@ -18,6 +18,9 @@ ble::StackchanService stackchan_srv;
 // (todo) make servo manager
 #ifdef FEETECH
 SMS_STS st;
+#else
+Servo servo_pan;
+Servo servo_tilt;
 #endif
 short max_sweep = 4095;
 short min_sweep = 0;
@@ -62,35 +65,27 @@ void setup() {
   M5.begin();
 
   faces[0] = avatar.getFace();
-  faces[1] = new m5avatar::DogFace();
-  faces[2] = new m5avatar::FbkFace();
+  faces[1] = new m5avatar::FbkFace();
+  faces[2] = new m5avatar::DogFace();
 
-  // FBK Paleette
-  // eye: #383838
-  // skin: #FFEEE6,
-  // cheek: #FECECA COLOR_SECONDARY
-  // uint32_t eye_color = 0x383838;
-  // uint32_t skin_color = 0xFFEEE6;
-  // uint32_t cheek_color = 0xFECECA;
-  // color_palettes[1]->set(COLOR_PRIMARY,
-  //                        color::to16bitscolor(0x383838));  // eye
-  // color_palettes[1]->set(COLOR_BACKGROUND,
-  //                        color::to16bitscolor(0xFFEEE6));  // skin
-  // color_palettes[1]->set(COLOR_SECONDARY,
-  //                        color::to16bitscolor(0xFECECA));  // cheek
-  //
   color_palettes[0] = new m5avatar::ColorPalette();
   color_palettes[1] = new m5avatar::ColorPalette();
   color_palettes[2] = new m5avatar::ColorPalette();
   color_palettes[3] = new m5avatar::ColorPalette();
-  color_palettes[1]->set(COLOR_PRIMARY, TFT_YELLOW);
-  color_palettes[1]->set(COLOR_BACKGROUND, TFT_DARKCYAN);
+  // FBK Palette
+  color_palettes[1]->set(COLOR_PRIMARY,
+                         M5.Lcd.color24to16(0x383838));  // eye
+  color_palettes[1]->set(COLOR_BACKGROUND,
+                         M5.Lcd.color24to16(0xfac2a8));  // skin
+  color_palettes[1]->set(COLOR_SECONDARY,
+                         TFT_PINK);  // cheek
+  // end of FBK Palette
   color_palettes[2]->set(COLOR_PRIMARY, TFT_DARKGREY);
   color_palettes[2]->set(COLOR_BACKGROUND, TFT_WHITE);
   color_palettes[3]->set(COLOR_PRIMARY, TFT_RED);
   color_palettes[3]->set(COLOR_BACKGROUND, TFT_PINK);
 
-  avatar.init();  // start drawing
+  avatar.init(8);  // start drawing w/ 8bit color mode
 
   if (!BLE.begin()) {
     // "starting BLE failed!"
@@ -120,7 +115,19 @@ void setup() {
   st.RegWritePosEx(servo_tilt_id, max_sweep / 2, speed, acc);
   st.RegWriteAction();
   // delay(1884);  //[(P1-P0)/Speed]*1000+[Speed/(Acc*100)]*1000
+#else
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
 
+  servo_pan.setPeriodHertz(50);   // standard 50 hz servo
+  servo_tilt.setPeriodHertz(50);  // standard 50 hz servo
+
+  stackchan_srv.pan_limit.min = 90 - 30;  // yaw
+  stackchan_srv.pan_limit.max = 90 + 30;
+  stackchan_srv.tilt_limit.min = 90 - 40;  // pitch
+  stackchan_srv.tilt_limit.max = 90 + 10;
 #endif
 }
 
@@ -133,6 +140,8 @@ void loop() {
   BLE.poll();
 #ifdef FEETECH
   stackchan_srv.servoPoll(st);
+#else
+  stackchan_srv.servoPoll(servo_pan, servo_tilt);
 #endif
   stackchan_srv.facialExpressionPoll(avatar, expressions, expressions_size);
   stackchan_srv.facialColorPoll(avatar, color_palettes, color_palettes_size);

@@ -66,6 +66,10 @@ class FbkMouth : public Drawable {
         ctx->getColorDepth() == 1
             ? ERACER_COLOR
             : ctx->getColorPalette()->get(COLOR_BACKGROUND);
+    uint16_t secondary_color =
+        ctx->getColorDepth() == 1
+            ? 1
+            : ctx->getColorPalette()->get(COLOR_SECONDARY);
     uint32_t cx = rect.getCenterX();
     uint32_t cy = rect.getCenterY();
     float openRatio = ctx->getMouthOpenRatio();
@@ -97,8 +101,8 @@ class FbkMouth : public Drawable {
                   backgroundColor);
 
     // cheek
-    spi->fillEllipse(cx - 132, cy - 23, 24, 10, COLOR_SECONDARY);
-    spi->fillEllipse(cx + 132, cy - 23, 24, 10, COLOR_SECONDARY);
+    spi->fillEllipse(cx - 132, cy - 23, 24, 10, secondary_color);
+    spi->fillEllipse(cx + 132, cy - 23, 24, 10, secondary_color);
   }
 };
 
