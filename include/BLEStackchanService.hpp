@@ -5,10 +5,27 @@
 
 #include <ArduinoBLE.h>
 #include <Avatar.h>
-#include <ESP32Servo.h>
 
 #include "BLEFormat.hpp"
 #include "BLEUnit.hpp"
+#include "SCServo.h"
+
+namespace color {
+u_int16_t to16bitscolor(u_int32_t color) {
+  // https://docs.arduino.cc/library-examples/tft-library/TFTColorPicker
+  u_int8_t r = (0x00FF0000 & color) >> 16;
+  u_int8_t g = (0x0000FF00 & color) >> 8;
+  u_int8_t b = (0x000000FF & color);
+
+  // 5bits red and blue
+  r = 0b11111 * (static_cast<float>(r) / 255.0f);
+  b = 0b11111 * (static_cast<float>(b) / 255.0f);
+  // 6bits green
+  g = 0b111111 * (static_cast<float>(g) / 255.0f);
+
+  return r << 11 | g << 5 | b;
+}
+}  // namespace color
 
 namespace ble {
 
@@ -76,8 +93,8 @@ class StackchanService : public BLEService {
   StackchanService(/* args */);
   // ~StackchanService();
   void setInitialValues();
-  void servoPoll(Servo &servo_pan, Servo &servo_tilt, uint8_t pan_pin = 32,
-                 uint8_t tilt_pin = 33);
+  void servoPoll(SMS_STS &sts, uint8_t pan_id = 0, uint8_t tilt_id = 1,
+                 unsigned short speed = 3400, unsigned acc = 50);
 
   void facialExpressionPoll(m5avatar::Avatar &avatar,
                             const m5avatar::Expression expressions[],
@@ -169,65 +186,52 @@ StackchanService::StackchanService()
   this->servo_tilt_angle_chr.addDescriptor(angle_tilt_descriptor01);
 };
 
-u_int16_t to16bitscolor(u_int32_t color) {
-  // https://docs.arduino.cc/library-examples/tft-library/TFTColorPicker
-  u_int8_t r = (0x00FF0000 & color) >> 16;
-  u_int8_t g = (0x0000FF00 & color) >> 8;
-  u_int8_t b = (0x000000FF & color);
-
-  // 5bits red and blue
-  r = 0b11111 * (static_cast<float>(r) / 255.0f);
-  b = 0b11111 * (static_cast<float>(b) / 255.0f);
-  // 6bits green
-  g = 0b111111 * (static_cast<float>(g) / 255.0f);
-
-  return r << 11 | g << 5 | b;
-}
-
 void StackchanService::setInitialValues() {
   this->timer_chr.writeValue(0U);
-  this->is_servo_activated_chr.writeValue(false);
-  this->servo_pan_angle_chr.writeValue(90U);
-  this->servo_tilt_angle_chr.writeValue(90U);
+  this->is_servo_activated_chr.writeValue(true);
+  this->servo_pan_angle_chr.writeValue(180U);
+  this->servo_tilt_angle_chr.writeValue(180U);
 
   this->primary_color_chr.writeValueLE(0xffffff);
   this->background_color_chr.writeValueLE(0x000000);
 };
 
-void StackchanService::servoPoll(Servo &servo_pan, Servo &servo_tilt,
-                                 uint8_t pan_pin, uint8_t tilt_pin) {
+void StackchanService::servoPoll(SMS_STS &sts, uint8_t pan_id, uint8_t tilt_id,
+                                 unsigned short speed, unsigned acc) {
   if (this->is_servo_activated_chr.written()) {
     if (this->is_servo_activated_chr.value()) {
       // activate servo
-      servo_pan.attach(pan_pin);
-      servo_tilt.attach(tilt_pin);
+
     } else {
-      servo_pan.detach();
-      servo_pan.detach();
+      // (todo)
+      // deactivate
     }
   }
 
-  if (this->is_servo_activated_chr.value()) {
-    if (this->servo_pan_angle_chr.written()) {
-      auto angle = this->servo_pan_angle_chr.value();
-      if (angle < this->pan_limit.min) {
-        angle = this->pan_limit.min;
-      }
-      if (this->pan_limit.max < angle) {
-        angle = this->pan_limit.max;
-      }
-      servo_pan.write(angle);
+  if (this->servo_pan_angle_chr.written()) {
+    auto angle = this->servo_pan_angle_chr.value();
+    // if (angle < this->pan_limit.min) {
+    //   angle = this->pan_limit.min;
+    // }
+    // if (this->pan_limit.max < angle) {
+    //   angle = this->pan_limit.max;
+    // }
+    // STS3032: 0--360deg
+    sts.RegWritePosEx(pan_id, static_cast<short>((angle / 360.0f) * 4095),
+                      speed, acc);
+    sts.RegWriteAction();
+  }
+  if (this->servo_tilt_angle_chr.written()) {
+    auto angle = this->servo_tilt_angle_chr.value();
+    if (angle < this->tilt_limit.min) {
+      angle = this->tilt_limit.min;
     }
-    if (this->servo_tilt_angle_chr.written()) {
-      auto angle = this->servo_tilt_angle_chr.value();
-      if (angle < this->tilt_limit.min) {
-        angle = this->tilt_limit.min;
-      }
-      if (this->tilt_limit.max < angle) {
-        angle = this->tilt_limit.max;
-      }
-      servo_tilt.write(angle);
+    if (this->tilt_limit.max < angle) {
+      angle = this->tilt_limit.max;
     }
+    sts.RegWritePosEx(tilt_id, static_cast<short>((angle / 360.0f) * 4095),
+                      speed, acc);
+    sts.RegWriteAction();
   }
 }
 
@@ -260,9 +264,10 @@ void StackchanService::facialColorPoll(m5avatar::Avatar &avatar,
     auto idx = this->facial_color_chr.value();
     // convert 24 bit color to 16bit color
     palettes[idx]->set(COLOR_PRIMARY,
-                       to16bitscolor(this->primary_color_chr.valueLE()));
-    palettes[idx]->set(COLOR_BACKGROUND,
-                       to16bitscolor(this->background_color_chr.valueLE()));
+                       color::to16bitscolor(this->primary_color_chr.valueLE()));
+    palettes[idx]->set(
+        COLOR_BACKGROUND,
+        color::to16bitscolor(this->background_color_chr.valueLE()));
     avatar.setColorPalette(*palettes[idx]);
   }
 }

@@ -65,6 +65,20 @@ void setup() {
   faces[1] = new m5avatar::DogFace();
   faces[2] = new m5avatar::FbkFace();
 
+  // FBK Paleette
+  // eye: #383838
+  // skin: #FFEEE6,
+  // cheek: #FECECA COLOR_SECONDARY
+  // uint32_t eye_color = 0x383838;
+  // uint32_t skin_color = 0xFFEEE6;
+  // uint32_t cheek_color = 0xFECECA;
+  // color_palettes[1]->set(COLOR_PRIMARY,
+  //                        color::to16bitscolor(0x383838));  // eye
+  // color_palettes[1]->set(COLOR_BACKGROUND,
+  //                        color::to16bitscolor(0xFFEEE6));  // skin
+  // color_palettes[1]->set(COLOR_SECONDARY,
+  //                        color::to16bitscolor(0xFECECA));  // cheek
+  //
   color_palettes[0] = new m5avatar::ColorPalette();
   color_palettes[1] = new m5avatar::ColorPalette();
   color_palettes[2] = new m5avatar::ColorPalette();
