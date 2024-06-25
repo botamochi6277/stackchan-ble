@@ -16,9 +16,9 @@ class FbkFace : public Face {
     FbkFace()
         : Face(new OmegaMouth(), new BoundingRect(225, 160),
                // right eye, second eye arg is center position of eye
-               new EllipseEye(), new BoundingRect(165, 84),
+               new EllipseEye(false), new BoundingRect(165, 84),
                //  left eye
-               new EllipseEye(), new BoundingRect(165, 84 + 154),
+               new EllipseEye(true), new BoundingRect(165, 84 + 154),
                //  hide eye blows with setting these height zero
                new Eyeblow(15, 0, false), new BoundingRect(67, 96),
                new Eyeblow(15, 0, true), new BoundingRect(72, 230)) {}
