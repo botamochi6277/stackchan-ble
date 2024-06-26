@@ -4,9 +4,7 @@
 #include <BoundingRect.h>
 #include <DrawContext.h>
 #include <Drawable.h>
-#include <Face.h>
-// #include <M5Unified.h>  // TODO(botamochi): include only the Sprite function
-// not a whole library
+
 
 namespace m5avatar {
 // TODO: make BaseEye
@@ -29,7 +27,7 @@ class EllipseEye : public Drawable {
         // TODO: refactor, this is common process for all eyes
         uint32_t cx = rect.getCenterX();
         uint32_t cy = rect.getCenterY();
-        Gaze g = ctx->getGaze();
+        Gaze g = this->is_left_ ? ctx->getLeftGaze() : ctx->getRightGaze();
         ColorPalette *cp = ctx->getColorPalette();
         uint16_t primaryColor =
             ctx->getColorDepth() == 1 ? 1 : cp->get(COLOR_PRIMARY);
@@ -42,19 +40,19 @@ class EllipseEye : public Drawable {
         uint32_t offsetY = g.getVertical() * 5;
         uint32_t x_shifted = cx + offsetX;
         uint32_t y_shifted = cy + offsetY;
-        float eor = ctx->getEyeOpenRatio();
+        float eor = this->is_left_ ? ctx->getLeftEyeOpenRatio()
+                                   : ctx->getRightEyeOpenRatio();
         auto expression = ctx->getExpression();
         // the end of the common process
 
         if (eor == 0 || expression == Expression::Sleepy) {
             // eye closed
-            // NOTE: center of closed eye is lower than the center of bbox
+            // NOTE: the center of closed eye is lower than the center of bbox
             canvas->fillRect(x_shifted - (this->width_ / 2),
                              y_shifted - 2 + this->height_ / 4, this->width_, 4,
                              primaryColor);
             return;
         } else if (expression == Expression::Happy) {
-            /* code */
             auto wink_base_y = y_shifted + this->height_ / 4;
             uint32_t thickness = 4;
             canvas->fillEllipse(
@@ -73,12 +71,10 @@ class EllipseEye : public Drawable {
 
         canvas->fillEllipse(x_shifted, y_shifted, this->width_ / 2,
                             this->height_ / 2, primaryColor);
-        // spi->fillEllipse(cx + offsetX - 3, cy + offsetY - 3, 3, 3,
-        // backgroundColor);
 
         // ## expression
 
-        // note: you can not define variable in switch scope
+        // note: you cannot define variable in switch scope
         int x0, y0, x1, y1, x2, y2;
         switch (expression) {
             case Expression::Angry:
@@ -115,8 +111,6 @@ class EllipseEye : public Drawable {
             default:
                 break;
         }
-
-        // spi->fillTriangle();
     }
 };
 
