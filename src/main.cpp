@@ -2,6 +2,7 @@
 #include <ArduinoBLE.h>
 #include <Avatar.h>
 #include <M5Unified.h>
+#include <TaskManager.h>
 
 #include "BLEStackchanService.hpp"
 #include "FbkFace.hpp"
@@ -127,6 +128,7 @@ void setup() {
     }
 #endif
 
+    // ## beginning Bluetooth setup
     String ble_address = BLE.address();
     String local_name = "Stackchan_" + ble_address;
     BLE.setDeviceName(local_name.c_str());
@@ -138,6 +140,8 @@ void setup() {
     stackchan_srv.setInitialValues();
     // start advertising
     BLE.advertise();
+
+    // ## Servo setting
 
 #ifdef FEETECH
     // init position
@@ -159,40 +163,53 @@ void setup() {
     stackchan_srv.tilt_limit.min = 90 - 40;  // pitch
     stackchan_srv.tilt_limit.max = 90 + 10;
 #endif
+
+    // ## register tasks
+    Tasks
+        .add(
+            "M5_update",
+            [] {
+                M5.update();
+                if (M5.BtnA.wasPressed()) {
+                    avatar.setFace(faces[face_idx]);
+                    face_idx = (face_idx + 1) % faces_length;
+                }
+                if (M5.BtnB.wasPressed()) {
+                    avatar.setColorPalette(*color_palettes[color_palettes_idx]);
+                    // have no effect on written flag
+                    // stackchan_srv.facial_color_chr.writeValue(color_palettes_idx);
+                    color_palettes_idx =
+                        (color_palettes_idx + 1) % color_palettes_size;
+                }
+            })
+        ->startFps(100);
+    Tasks
+        .add("Clock",
+             [] {
+                 milli_sec = millis();
+                 stackchan_srv.timer_chr.writeValue(milli_sec);
+             })
+        ->startFps(60);
+    Tasks.add("BLE_polling", [] { BLE.poll(); })->startFps(10);
+    Tasks
+        .add("Facial_Update",
+             [] {
+                 stackchan_srv.facialExpressionPoll(avatar, expressions,
+                                                    expressions_size);
+                 stackchan_srv.facialColorPoll(avatar, color_palettes,
+                                               color_palettes_size);
+                 stackchan_srv.mouseOpenPoll(avatar);
+             })
+        ->startFps(30);
 }
 
 void loop() {
-    // avatar's face updates in another thread
-    // so no need to loop-by-loop rendering
-    M5.update();
-    milli_sec = millis();
-    stackchan_srv.timer_chr.writeValue(milli_sec);
-    BLE.poll();
+    Tasks.update();  // automatically execute tasks
 #ifdef FEETECH
     stackchan_srv.servoPoll(st);
 #else
     stackchan_srv.servoPoll(servo_pan, servo_tilt);
 #endif
-    stackchan_srv.facialExpressionPoll(avatar, expressions, expressions_size);
-    stackchan_srv.facialColorPoll(avatar, color_palettes, color_palettes_size);
-    stackchan_srv.mouseOpenPoll(avatar);
 
-    if (M5.BtnA.wasPressed()) {
-        avatar.setFace(faces[face_idx]);
-        face_idx = (face_idx + 1) % faces_length;
-    }
-    if (M5.BtnB.wasPressed()) {
-        avatar.setColorPalette(*color_palettes[color_palettes_idx]);
-        // have no effect on written flag
-        // stackchan_srv.facial_color_chr.writeValue(color_palettes_idx);
-        color_palettes_idx = (color_palettes_idx + 1) % color_palettes_size;
-    }
-#ifndef FEETECH
-    if (M5.BtnC.wasPressed()) {
-        demo();
-    }
-#endif
-    // time_sec = millis() * 1.0e-3f;
-
-    delay(10);
+    delay(1);
 }
