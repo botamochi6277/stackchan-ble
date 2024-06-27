@@ -16,20 +16,19 @@
 m5avatar::Avatar avatar;
 ble::StackchanService stackchan_srv;
 
-// (todo) make servo manager
 const uint8_t servo_pan_id = 19;
 const uint8_t servo_tilt_id = 27;
-stackchan::PanTiltManager pan_tilt_manager(servo_pan_id, servo_tilt_id, 10.0f);
+stackchan::PanTiltManager pan_tilt_manager(servo_pan_id, servo_tilt_id);
 
-short max_sweep = 4095;
-short min_sweep = 0;
-unsigned short speed = 3400;
-unsigned char acc = 50;
+// short max_sweep = 4095;
+// short min_sweep = 0;
+// unsigned short speed = 3400;
+// unsigned char acc = 50;
 
-uint8_t pan_min = 60;   // deg
-uint8_t pan_max = 120;  // deg
-uint8_t tilt_min = 80;
-uint8_t tilt_max = 100;
+// uint8_t pan_min = 60;   // deg
+// uint8_t pan_max = 120;  // deg
+// uint8_t tilt_min = 80;
+// uint8_t tilt_max = 100;
 
 float time_sec = 0.0f;
 unsigned long milli_sec = 0U;
@@ -48,43 +47,6 @@ uint8_t color_palettes_idx = 0;
 m5avatar::Face* faces[2];
 const int faces_length = sizeof(faces) / sizeof(m5avatar::Face*);
 int face_idx = 0;
-
-// TODO: remove delay in func
-// void demo() {
-//     delay(3000);  // timer
-//     servo_tilt.write(90 - 10);
-//     delay(1000);
-//     // nod yes
-//     for (size_t i = 0; i < 2; i++) {
-//         servo_tilt.write(90 - 30);
-//         delay(500);
-//         servo_tilt.write(90 + 10);
-//         delay(500);
-//     }
-//     servo_tilt.write(90 - 10);
-//     delay(1000);
-//     // no,no
-
-//     for (size_t i = 0; i < 2; i++) {
-//         servo_pan.write(90 - 30);
-//         delay(500);
-//         servo_pan.write(90 + 30);
-//         delay(500);
-//     }
-//     servo_pan.write(90);
-//     delay(1000);
-
-//     for (size_t i = 0; i < 10; i++) {
-//         M5.update();
-//         avatar.setMouthOpenRatio(static_cast<float>(i / 10.0f));
-//         delay(10);
-//     }
-//     for (size_t i = 0; i < 10; i++) {
-//         M5.update();
-//         avatar.setMouthOpenRatio(1.0f - static_cast<float>(i / 10.0f));
-//         delay(100);
-//     }
-// }
 
 void setup() {
 #ifdef FEETECH

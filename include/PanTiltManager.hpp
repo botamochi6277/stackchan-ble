@@ -43,7 +43,6 @@ class PanTiltManager {
    private:
     uint8_t servo_pan_id_;   // yaw
     uint8_t servo_tilt_id_;  // pitch
-    float control_freq_;     // Hz
 
     float pan_angle_;   // deg, current angle
     float tilt_angle_;  // deg, current angle
@@ -59,7 +58,7 @@ class PanTiltManager {
     float tilt_drive_complete_time_;
 
    public:
-    PanTiltManager(uint8_t pan_id, uint8_t tilt_id, float ctrl_frq);
+    PanTiltManager(uint8_t pan_id, uint8_t tilt_id);
     ~PanTiltManager();
 
 #ifdef FEETECH
@@ -80,8 +79,8 @@ class PanTiltManager {
     void update();
 };
 
-PanTiltManager::PanTiltManager(uint8_t pan_id, uint8_t tilt_id, float ctrl_frq)
-    : servo_pan_id_(pan_id), servo_tilt_id_(tilt_id), control_freq_(ctrl_frq) {
+PanTiltManager::PanTiltManager(uint8_t pan_id, uint8_t tilt_id)
+    : servo_pan_id_(pan_id), servo_tilt_id_(tilt_id) {
     this->pan_angle_ = 90.0f;
     this->tilt_angle_ = 90.0f;
 }
@@ -113,6 +112,13 @@ void PanTiltManager::panDrive(float angle, float duration) {
     this->pan_target_angle_ = angle;
 }
 
+void PanTiltManager::tiltDrive(float angle, float duration) {
+    this->tilt_drive_start_time_ = millis() / 1.0e3;
+    this->tilt_drive_complete_time_ = this->tilt_drive_start_time_ + duration;
+    this->tilt_drive_start_angle_ = this->tilt_angle_;
+    this->tilt_target_angle_ = angle;
+}
+
 void PanTiltManager::update() {
     float t = millis() / 1.0e3;
     // pan
@@ -130,7 +136,7 @@ void PanTiltManager::update() {
     if (t < this->tilt_drive_complete_time_) {
         float duration =
             this->tilt_drive_complete_time_ - this->tilt_drive_start_time_;
-        float elapse_time = t - this->pan_drive_start_angle_;
+        float elapse_time = t - this->tilt_drive_start_time_;
         float m = quadInOut(elapse_time, duration);
         float current_angle =
             remap(m, 0.0f, 1.0f, this->tilt_drive_start_angle_,

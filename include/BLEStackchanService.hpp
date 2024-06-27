@@ -263,14 +263,14 @@ void StackchanService::servoPoll(stackchan::PanTiltManager &manager) {
             manager.panDrive(static_cast<float>(angle), 3.0f);
         }
         if (this->servo_tilt_angle_chr.written()) {
-            // auto angle = this->servo_tilt_angle_chr.value();
-            // if (angle < this->tilt_limit.min) {
-            //     angle = this->tilt_limit.min;
-            // }
-            // if (this->tilt_limit.max < angle) {
-            //     angle = this->tilt_limit.max;
-            // }
-            // servo_tilt.write(angle);
+            auto angle = this->servo_tilt_angle_chr.value();
+            if (angle < this->tilt_limit.min) {
+                angle = this->tilt_limit.min;
+            }
+            if (this->tilt_limit.max < angle) {
+                angle = this->tilt_limit.max;
+            }
+            manager.tiltDrive(static_cast<float>(angle), 3.0f);
         }
     }
 }
