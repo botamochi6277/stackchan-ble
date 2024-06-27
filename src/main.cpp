@@ -6,6 +6,7 @@
 
 #include "BLEStackchanService.hpp"
 #include "FbkFace.hpp"
+#include "PanTiltManager.hpp"
 
 #ifdef FEETECH
 #include "SCServo.h"
@@ -16,18 +17,15 @@ m5avatar::Avatar avatar;
 ble::StackchanService stackchan_srv;
 
 // (todo) make servo manager
-#ifdef FEETECH
-SMS_STS st;
-#else
-Servo servo_pan;
-Servo servo_tilt;
-#endif
+const uint8_t servo_pan_id = 19;
+const uint8_t servo_tilt_id = 27;
+stackchan::PanTiltManager pan_tilt_manager(servo_pan_id, servo_tilt_id, 10.0f);
+
 short max_sweep = 4095;
 short min_sweep = 0;
 unsigned short speed = 3400;
 unsigned char acc = 50;
-const uint8_t servo_pan_id = 0;
-const uint8_t servo_tilt_id = 1;
+
 uint8_t pan_min = 60;   // deg
 uint8_t pan_max = 120;  // deg
 uint8_t tilt_min = 80;
@@ -52,41 +50,41 @@ const int faces_length = sizeof(faces) / sizeof(m5avatar::Face*);
 int face_idx = 0;
 
 // TODO: remove delay in func
-void demo() {
-    delay(3000);  // timer
-    servo_tilt.write(90 - 10);
-    delay(1000);
-    // nod yes
-    for (size_t i = 0; i < 2; i++) {
-        servo_tilt.write(90 - 30);
-        delay(500);
-        servo_tilt.write(90 + 10);
-        delay(500);
-    }
-    servo_tilt.write(90 - 10);
-    delay(1000);
-    // no,no
+// void demo() {
+//     delay(3000);  // timer
+//     servo_tilt.write(90 - 10);
+//     delay(1000);
+//     // nod yes
+//     for (size_t i = 0; i < 2; i++) {
+//         servo_tilt.write(90 - 30);
+//         delay(500);
+//         servo_tilt.write(90 + 10);
+//         delay(500);
+//     }
+//     servo_tilt.write(90 - 10);
+//     delay(1000);
+//     // no,no
 
-    for (size_t i = 0; i < 2; i++) {
-        servo_pan.write(90 - 30);
-        delay(500);
-        servo_pan.write(90 + 30);
-        delay(500);
-    }
-    servo_pan.write(90);
-    delay(1000);
+//     for (size_t i = 0; i < 2; i++) {
+//         servo_pan.write(90 - 30);
+//         delay(500);
+//         servo_pan.write(90 + 30);
+//         delay(500);
+//     }
+//     servo_pan.write(90);
+//     delay(1000);
 
-    for (size_t i = 0; i < 10; i++) {
-        M5.update();
-        avatar.setMouthOpenRatio(static_cast<float>(i / 10.0f));
-        delay(10);
-    }
-    for (size_t i = 0; i < 10; i++) {
-        M5.update();
-        avatar.setMouthOpenRatio(1.0f - static_cast<float>(i / 10.0f));
-        delay(100);
-    }
-}
+//     for (size_t i = 0; i < 10; i++) {
+//         M5.update();
+//         avatar.setMouthOpenRatio(static_cast<float>(i / 10.0f));
+//         delay(10);
+//     }
+//     for (size_t i = 0; i < 10; i++) {
+//         M5.update();
+//         avatar.setMouthOpenRatio(1.0f - static_cast<float>(i / 10.0f));
+//         delay(100);
+//     }
+// }
 
 void setup() {
 #ifdef FEETECH
@@ -155,8 +153,8 @@ void setup() {
     ESP32PWM::allocateTimer(2);
     ESP32PWM::allocateTimer(3);
 
-    servo_pan.setPeriodHertz(50);   // standard 50 hz servo
-    servo_tilt.setPeriodHertz(50);  // standard 50 hz servo
+    // servo_pan.setPeriodHertz(50);   // standard 50 hz servo
+    // servo_tilt.setPeriodHertz(50);  // standard 50 hz servo
 
     stackchan_srv.pan_limit.min = 90 - 30;  // yaw
     stackchan_srv.pan_limit.max = 90 + 30;
@@ -165,6 +163,7 @@ void setup() {
 #endif
 
     // ## register tasks
+    Tasks.setAutoErase(true);
     Tasks
         .add(
             "M5_update",
@@ -190,7 +189,13 @@ void setup() {
                  stackchan_srv.timer_chr.writeValue(milli_sec);
              })
         ->startFps(60);
-    Tasks.add("BLE_polling", [] { BLE.poll(); })->startFps(10);
+    Tasks
+        .add("BLE_polling",
+             [] {
+                 BLE.poll();
+                 stackchan_srv.servoPoll(pan_tilt_manager);
+             })
+        ->startFps(10);
     Tasks
         .add("Facial_Update",
              [] {
@@ -201,15 +206,13 @@ void setup() {
                  stackchan_srv.mouseOpenPoll(avatar);
              })
         ->startFps(30);
+
+    Tasks.add("PanTilt_Update", [] { pan_tilt_manager.update(); })
+        ->startFps(60);
 }
 
 void loop() {
     Tasks.update();  // automatically execute tasks
-#ifdef FEETECH
-    stackchan_srv.servoPoll(st);
-#else
-    stackchan_srv.servoPoll(servo_pan, servo_tilt);
-#endif
 
     delay(1);
 }
