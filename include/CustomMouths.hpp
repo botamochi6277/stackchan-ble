@@ -1,5 +1,5 @@
-#ifndef CUSTOM_MOUTH_HPP_
-#define CUSTOM_MOUTH_HPP_
+#ifndef CUSTOM_MOUTHS_HPP_
+#define CUSTOM_MOUTHS_HPP_
 
 #include <BoundingRect.h>
 #include <DrawContext.h>
