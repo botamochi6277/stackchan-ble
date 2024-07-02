@@ -5,105 +5,117 @@
 #include <DrawContext.h>
 #include <Drawable.h>
 
-
 namespace m5avatar {
 // TODO: make BaseEye
 
-class EllipseEye : public Drawable {
-   private:
+class BaseEye : public Drawable {
+   protected:
     uint16_t height_;
     uint16_t width_;
     bool is_left_;
 
+    // cache for drawing
+    int16_t center_x_;
+    int16_t center_y_;
+    Gaze gaze_;
+    uint16_t primary_color_;
+    uint16_t background_color_;
+    int16_t shifted_x_;
+    int16_t shifted_y_;
+    float open_ratio_;
+    Expression expression_;
+
    public:
-    EllipseEye(bool is_left) : EllipseEye(36, 70, is_left) {}
-    EllipseEye(uint16_t width, uint16_t height, bool is_left) {
+    BaseEye(bool is_left) : BaseEye(36, 70, is_left) {}
+    BaseEye(uint16_t width, uint16_t height, bool is_left) {
         this->width_ = width;
         this->height_ = height;
         this->is_left_ = is_left;
     }
-
-    void draw(M5Canvas *canvas, BoundingRect rect, DrawContext *ctx) {
-        // TODO: refactor, this is common process for all eyes
-        uint32_t cx = rect.getCenterX();
-        uint32_t cy = rect.getCenterY();
-        Gaze g = this->is_left_ ? ctx->getLeftGaze() : ctx->getRightGaze();
+    void update(M5Canvas *canvas, BoundingRect rect, DrawContext *ctx) {
+        // common process for all standard eyes
+        // update drawing parameters
+        center_x_ = rect.getCenterX();
+        center_y_ = rect.getCenterY();
+        gaze_ = this->is_left_ ? ctx->getLeftGaze() : ctx->getRightGaze();
         ColorPalette *cp = ctx->getColorPalette();
-        uint16_t primaryColor =
-            ctx->getColorDepth() == 1 ? 1 : cp->get(COLOR_PRIMARY);
-        uint16_t backgroundColor = ctx->getColorDepth() == 1
-                                       ? ERACER_COLOR
-                                       : cp->get(COLOR_BACKGROUND);
+        primary_color_ = ctx->getColorDepth() == 1 ? 1 : cp->get(COLOR_PRIMARY);
+        background_color_ = ctx->getColorDepth() == 1
+                                ? ERACER_COLOR
+                                : cp->get(COLOR_BACKGROUND);
 
         // offset computed from gaze direction
-        uint32_t offsetX = g.getHorizontal() * 8;
-        uint32_t offsetY = g.getVertical() * 5;
-        uint32_t x_shifted = cx + offsetX;
-        uint32_t y_shifted = cy + offsetY;
-        float eor = this->is_left_ ? ctx->getLeftEyeOpenRatio()
-                                   : ctx->getRightEyeOpenRatio();
-        auto expression = ctx->getExpression();
-        // the end of the common process
+        shifted_x_ = center_x_ + gaze_.getHorizontal() * 8;
+        shifted_y_ = center_y_ + gaze_.getVertical() * 5;
+        open_ratio_ = this->is_left_ ? ctx->getLeftEyeOpenRatio()
+                                     : ctx->getRightEyeOpenRatio();
+        expression_ = ctx->getExpression();
+    }
+};
 
-        if (eor == 0 || expression == Expression::Sleepy) {
+class EllipseEye : public BaseEye {
+   public:
+    using BaseEye::BaseEye;
+    void draw(M5Canvas *canvas, BoundingRect rect, DrawContext *ctx) {
+        this->update(canvas, rect, ctx);
+        if (open_ratio_ == 0 || expression_ == Expression::Sleepy) {
             // eye closed
             // NOTE: the center of closed eye is lower than the center of bbox
-            canvas->fillRect(x_shifted - (this->width_ / 2),
-                             y_shifted - 2 + this->height_ / 4, this->width_, 4,
-                             primaryColor);
+            canvas->fillRect(shifted_x_ - (this->width_ / 2),
+                             shifted_y_ - 2 + this->height_ / 4, this->width_,
+                             4, primary_color_);
             return;
-        } else if (expression == Expression::Happy) {
-            auto wink_base_y = y_shifted + this->height_ / 4;
+        } else if (expression_ == Expression::Happy) {
+            auto wink_base_y = shifted_y_ + this->height_ / 4;
             uint32_t thickness = 4;
-            canvas->fillEllipse(
-                x_shifted, wink_base_y + (1 / 8) * this->height_,
-                this->width_ / 2, this->height_ / 4 + thickness, primaryColor);
+            canvas->fillEllipse(shifted_x_,
+                                wink_base_y + (1 / 8) * this->height_,
+                                this->width_ / 2, this->height_ / 4 + thickness,
+                                primary_color_);
             // mask
             canvas->fillEllipse(
-                x_shifted, wink_base_y + (1 / 8) * this->height_ + thickness,
+                shifted_x_, wink_base_y + (1 / 8) * this->height_ + thickness,
                 this->width_ / 2 - thickness, this->height_ / 4 + thickness,
-                backgroundColor);
-            canvas->fillRect(x_shifted - this->width_ / 2,
+                background_color_);
+            canvas->fillRect(shifted_x_ - this->width_ / 2,
                              wink_base_y + thickness / 2, this->width_,
-                             this->height_ / 4, backgroundColor);
+                             this->height_ / 4, background_color_);
             return;
         }
 
-        canvas->fillEllipse(x_shifted, y_shifted, this->width_ / 2,
-                            this->height_ / 2, primaryColor);
-
-        // ## expression
+        canvas->fillEllipse(shifted_x_, shifted_y_, this->width_ / 2,
+                            this->height_ / 2, primary_color_);
 
         // note: you cannot define variable in switch scope
         int x0, y0, x1, y1, x2, y2;
-        switch (expression) {
+        switch (expression_) {
             case Expression::Angry:
-                x0 = x_shifted - width_ / 2;
-                y0 = y_shifted - height_ / 2;
-                x1 = x_shifted + width_ / 2;
+                x0 = shifted_x_ - width_ / 2;
+                y0 = shifted_y_ - height_ / 2;
+                x1 = shifted_x_ + width_ / 2;
                 y1 = y0;
                 x2 = this->is_left_ ? x0 : x1;
-                y2 = y_shifted - height_ / 4;
-                canvas->fillTriangle(x0, y0, x1, y1, x2, y2, backgroundColor);
+                y2 = shifted_y_ - height_ / 4;
+                canvas->fillTriangle(x0, y0, x1, y1, x2, y2, background_color_);
                 break;
             case Expression::Sad:
-                x0 = x_shifted - width_ / 2;
-                y0 = y_shifted - height_ / 2;
-                x1 = x_shifted + width_ / 2;
+                x0 = shifted_x_ - width_ / 2;
+                y0 = shifted_y_ - height_ / 2;
+                x1 = shifted_x_ + width_ / 2;
                 y1 = y0;
                 x2 = this->is_left_ ? x1 : x0;
-                y2 = y_shifted - height_ / 4;
-                canvas->fillTriangle(x0, y0, x1, y1, x2, y2, backgroundColor);
+                y2 = shifted_y_ - height_ / 4;
+                canvas->fillTriangle(x0, y0, x1, y1, x2, y2, background_color_);
                 break;
             case Expression::Doubt:
                 // top left
-                x0 = x_shifted - width_ / 2;
-                y0 = y_shifted - height_ / 2;
+                x0 = shifted_x_ - width_ / 2;
+                y0 = shifted_y_ - height_ / 2;
                 // bottom right
-                x1 = x_shifted + width_ / 2;
-                y1 = y_shifted - height_ / 4;
+                x1 = shifted_x_ + width_ / 2;
+                y1 = shifted_y_ - height_ / 4;
 
-                canvas->fillRect(x0, y0, x1 - x0, y1 - y0, backgroundColor);
+                canvas->fillRect(x0, y0, x1 - x0, y1 - y0, background_color_);
                 break;
             case Expression::Sleepy:
                 break;
