@@ -126,6 +126,91 @@ class EllipseEye : public BaseEye {
     }
 };
 
+class GirlyEye : public BaseEye {
+   public:
+    using BaseEye::BaseEye;
+    void draw(M5Canvas *canvas, BoundingRect rect, DrawContext *ctx) {
+        this->update(canvas, rect, ctx);
+        auto wink_base_y = shifted_y_ + this->height_ / 4;
+
+        // eyelashes
+        uint16_t el_x0, el_y0, el_x1, el_y1, el_x2, el_y2;
+        el_x0 = this->is_left_ ? shifted_x_ + 26 : shifted_x_ - 26;
+        el_y0 = shifted_y_ - 23 * open_ratio_;
+        el_x1 = this->is_left_ ? shifted_x_ + 22 : shifted_x_ - 22;
+        el_y1 = shifted_y_ - 59 * open_ratio_;
+        el_x2 = this->is_left_ ? shifted_x_ - 8 : shifted_x_ + 8;
+        el_y2 = shifted_y_ - 37 * open_ratio_;
+        canvas->fillTriangle(el_x0, el_y0, el_x1, el_y1, el_x2, el_y2,
+                             primary_color_);
+
+        if (open_ratio_ == 0 || expression_ == Expression::Sleepy) {
+            // eye closed
+            // NOTE: the center of closed eye is lower than the center of bbox
+            canvas->fillRect(shifted_x_ - (this->width_ / 2), wink_base_y - 2,
+                             this->width_, 4, primary_color_);
+            return;
+        } else if (expression_ == Expression::Happy) {
+            uint32_t thickness = 4;
+            canvas->fillEllipse(shifted_x_,
+                                wink_base_y + (1 / 8) * this->height_,
+                                this->width_ / 2, this->height_ / 4 + thickness,
+                                primary_color_);
+            // mask
+            canvas->fillEllipse(
+                shifted_x_, wink_base_y + (1 / 8) * this->height_ + thickness,
+                this->width_ / 2 - thickness, this->height_ / 4 + thickness,
+                background_color_);
+            canvas->fillRect(shifted_x_ - this->width_ / 2,
+                             wink_base_y + thickness / 2, this->width_,
+                             this->height_ / 4, background_color_);
+            return;
+        }
+
+        canvas->fillEllipse(shifted_x_, shifted_y_, this->width_ / 2,
+                            this->height_ / 2, primary_color_);
+
+        // note: you cannot define variable in switch scope
+        int x0, y0, x1, y1, x2, y2;
+        switch (expression_) {
+            case Expression::Angry:
+                x0 = shifted_x_ - width_ / 2;
+                y0 = shifted_y_ - height_ / 2;
+                x1 = shifted_x_ + width_ / 2;
+                y1 = y0;
+                x2 = this->is_left_ ? x0 : x1;
+                y2 = shifted_y_ - height_ / 4;
+                canvas->fillTriangle(x0, y0, x1, y1, x2, y2, background_color_);
+                break;
+            case Expression::Sad:
+                x0 = shifted_x_ - width_ / 2;
+                y0 = shifted_y_ - height_ / 2;
+                x1 = shifted_x_ + width_ / 2;
+                y1 = y0;
+                x2 = this->is_left_ ? x1 : x0;
+                y2 = shifted_y_ - height_ / 4;
+                canvas->fillTriangle(x0, y0, x1, y1, x2, y2, background_color_);
+                break;
+            case Expression::Doubt:
+                // top left
+                x0 = shifted_x_ - width_ / 2;
+                y0 = shifted_y_ - height_ / 2;
+                // bottom right
+                x1 = shifted_x_ + width_ / 2;
+                y1 = shifted_y_ - height_ / 4;
+
+                canvas->fillRect(x0, y0, x1 - x0, y1 - y0, background_color_);
+                break;
+            case Expression::Sleepy:
+
+                break;
+
+            default:
+                break;
+        }
+    }
+};
+
 }  // namespace m5avatar
 
 #endif
