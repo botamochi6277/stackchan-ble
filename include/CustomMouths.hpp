@@ -85,6 +85,38 @@ class OmegaMouth : public BaseMouth {
     }
 };
 
+class UShapeMouth : public BaseMouth {
+   public:
+    using BaseMouth::BaseMouth;
+    void draw(M5Canvas *spi, BoundingRect rect, DrawContext *ctx) {
+        this->update(spi, rect, ctx);  // update drawing cache
+        uint32_t h = min_height_ + (max_height_ - min_height_) * open_ratio_;
+        uint32_t w = min_width_ + (max_width_ - min_width_) * (1 - open_ratio_);
+
+        auto ellipse_center_y = center_y_ - max_height_ / 2;
+        uint16_t thickness = 6;
+
+        // back
+        spi->fillEllipse(center_x_, ellipse_center_y, max_width_ / 2,
+                         max_height_, primary_color_);
+        // rect mask
+        spi->fillRect(center_x_ - max_width_ / 2,
+                      ellipse_center_y - max_height_, max_width_, max_height_,
+                      background_color_);
+
+        // inner mouse
+        spi->fillEllipse(
+            center_x_, ellipse_center_y, max_width_ / 2 - thickness,
+            (max_height_ - thickness) * open_ratio_, background_color_);
+
+        // cheek
+        spi->fillEllipse(center_x_ - 132, center_y_ - 23, 24, 10,
+                         secondary_color_);
+        spi->fillEllipse(center_x_ + 132, center_y_ - 23, 24, 10,
+                         secondary_color_);
+    }
+};
+
 }  // namespace m5avatar
 
 #endif
