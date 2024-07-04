@@ -105,9 +105,10 @@ class UShapeMouth : public BaseMouth {
                       background_color_);
 
         // inner mouse
-        spi->fillEllipse(
-            center_x_, ellipse_center_y, max_width_ / 2 - thickness,
-            (max_height_ - thickness) * open_ratio_, background_color_);
+        spi->fillEllipse(center_x_, ellipse_center_y,
+                         max_width_ / 2 - thickness,
+                         (max_height_ - thickness) * (1.0f - open_ratio_),
+                         background_color_);
 
         // cheek
         spi->fillEllipse(center_x_ - 132, center_y_ - 23, 24, 10,

@@ -185,7 +185,7 @@ class GirlyEye : public BaseEye {
                             this->height_ / 4, primary_color_);
         // high light
         canvas->fillEllipse(shifted_x_ - width_ / 6, shifted_y_ - height_ / 6,
-                            width_ / 6, height_ / 6, 0xffffff);
+                            width_ / 8, height_ / 8, 0xffffff);
         // note: you cannot define variable in switch scope
         int x0, y0, x1, y1, x2, y2;
         switch (expression_) {
