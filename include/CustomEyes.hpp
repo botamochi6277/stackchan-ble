@@ -5,6 +5,7 @@
 #include <DrawContext.h>
 #include <Drawable.h>
 
+#include "DrawingUtils.hpp"
 namespace m5avatar {
 // TODO: make BaseEye
 
@@ -139,30 +140,59 @@ class GirlyEye : public BaseEye {
         auto upper_eyelid_y = shifted_y_ - 0.8f * height_ / 2 +
                               (1.0f - open_ratio_) * this->height_ * 0.6;
 
-        uint16_t el_x0, el_y0, el_x1, el_y1, el_x2, el_y2;
+        float el_x0, el_y0, el_x1, el_y1, el_x2, el_y2;
         el_x0 = this->is_left_ ? shifted_x_ + 22 : shifted_x_ - 22;
         el_y0 = upper_eyelid_y - 27;
         el_x1 = this->is_left_ ? shifted_x_ + 26 : shifted_x_ - 26;
         el_y1 = upper_eyelid_y;
         el_x2 = this->is_left_ ? shifted_x_ - 10 : shifted_x_ + 10;
         el_y2 = upper_eyelid_y;
-        if (open_ratio_ < 0.99f) {
+
+        float tilt = 0.0f;
+        float ref_tilt = open_ratio_ * M_PI / 6.0f;
+        float bias;
+        if (expression_ == Expression::Angry) {
+            tilt = this->is_left_ ? -ref_tilt : ref_tilt;
+        } else if (expression_ == Expression::Sad) {
+            tilt = this->is_left_ ? ref_tilt : -ref_tilt;
+        }
+        bias = 0.2f * width_ * tilt / (M_PI / 6.0f);
+
+        if ((open_ratio_ < 0.99f) || (abs(tilt) > 0.1f)) {
             // mask
             // top:shifted_y_ - this->height_ / 2
             // bottom: upper_eyelid_y
-            canvas->fillRect(
-                shifted_x_ - (this->width_ / 2), shifted_y_ - this->height_ / 2,
-                this->width_ + 1,
-                upper_eyelid_y - 2 - (shifted_y_ - this->height_ / 2),
-                background_color_);
+            float mask_top_left_x = shifted_x_ - (this->width_ / 2);
+            float mask_top_left_y = shifted_y_ - 0.75f * this->height_;
+            float mask_bottom_right_x = shifted_x_ + (this->width_ / 2);
+            float mask_bottom_right_y = upper_eyelid_y;
+
+            fillRectRotatedAround(canvas, mask_top_left_x, mask_top_left_y,
+                                  mask_bottom_right_x, mask_bottom_right_y,
+                                  tilt, shifted_x_, upper_eyelid_y,
+                                  background_color_);
 
             // eyelid
-            canvas->fillRect(shifted_x_ - (this->width_ / 2),
-                             upper_eyelid_y - 2, this->width_, 4,
-                             primary_color_);
+            float eyelid_top_left_x = shifted_x_ - (this->width_ / 2) + bias;
+            float eyelid_top_left_y = upper_eyelid_y - 4;
+            float eyelid_bottom_right_x =
+                shifted_x_ + (this->width_ / 2) + bias;
+            float eyelid_bottom_right_y = upper_eyelid_y;
+
+            fillRectRotatedAround(canvas, eyelid_top_left_x, eyelid_top_left_y,
+                                  eyelid_bottom_right_x, eyelid_bottom_right_y,
+                                  tilt, shifted_x_, upper_eyelid_y,
+                                  primary_color_);
+
+            el_x0 += bias;
+            el_x1 += bias;
+            el_x2 += bias;
         }
 
         // eyelash
+        rotatePointAround(el_x0, el_y0, tilt, shifted_x_, upper_eyelid_y);
+        rotatePointAround(el_x1, el_y1, tilt, shifted_x_, upper_eyelid_y);
+        rotatePointAround(el_x2, el_y2, tilt, shifted_x_, upper_eyelid_y);
         canvas->fillTriangle(el_x0, el_y0, el_x1, el_y1, el_x2, el_y2,
                              primary_color_);
     }
@@ -201,7 +231,7 @@ class GirlyEye : public BaseEye {
             this->drawEyeLid(canvas);
             return;
         }
-        // canvas->fillArc
+        // main eye
         if (open_ratio_ > 0.1f) {
             // bg
             canvas->fillEllipse(shifted_x_, shifted_y_, this->width_ / 2,
@@ -219,37 +249,6 @@ class GirlyEye : public BaseEye {
             canvas->fillEllipse(shifted_x_ - width_ / 6,
                                 shifted_y_ - height_ / 6, width_ / 8,
                                 height_ / 8, 0xffffff);
-        }
-        // note: you cannot define variable in switch scope
-        int x0, y0, x1, y1, x2, y2;
-        switch (expression_) {
-            case Expression::Angry:
-                x0 = shifted_x_;  // center
-                y0 = shifted_y_ - height_ / 2;
-                x1 = this->is_left_ ? shifted_x_ - width_ / 2
-                                    : shifted_x_ + width_ / 2;  // upper inner
-                y1 = y0;
-                x2 = x1;
-                y2 = shifted_y_ - height_ / 4;
-                canvas->fillTriangle(x0, y0, x1, y1, x2, y2,
-                                     background_color_);  // mask
-                break;
-            case Expression::Sad:
-                x0 = shifted_x_ - width_ / 2;
-                y0 = shifted_y_ - height_ / 2;
-                x1 = shifted_x_ + width_ / 2;
-                y1 = y0;
-                x2 = this->is_left_ ? x1 : x0;
-                y2 = shifted_y_ - height_ / 4;
-                canvas->fillTriangle(x0, y0, x1, y1, x2, y2,
-                                     background_color_);  // mask
-                break;
-            case Expression::Doubt:
-                break;
-            case Expression::Sleepy:
-                break;
-            default:
-                break;
         }
         this->drawEyeLid(canvas);
     }
