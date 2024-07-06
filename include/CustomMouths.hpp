@@ -101,8 +101,8 @@ class UShapeMouth : public BaseMouth {
                          max_height_, primary_color_);
         // rect mask
         spi->fillRect(center_x_ - max_width_ / 2,
-                      ellipse_center_y - max_height_, max_width_, max_height_,
-                      background_color_);
+                      ellipse_center_y - max_height_, max_width_ + 1,
+                      max_height_, background_color_);
 
         // inner mouse
         spi->fillEllipse(center_x_, ellipse_center_y,

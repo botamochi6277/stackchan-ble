@@ -133,29 +133,59 @@ class EllipseEye : public BaseEye {
 class GirlyEye : public BaseEye {
    public:
     using BaseEye::BaseEye;
+
+    void drawEyeLid(M5Canvas *canvas) {
+        // eyelid
+        auto upper_eyelid_y = shifted_y_ - 0.8f * height_ / 2 +
+                              (1.0f - open_ratio_) * this->height_ * 0.6;
+
+        uint16_t el_x0, el_y0, el_x1, el_y1, el_x2, el_y2;
+        el_x0 = this->is_left_ ? shifted_x_ + 22 : shifted_x_ - 22;
+        el_y0 = upper_eyelid_y - 27;
+        el_x1 = this->is_left_ ? shifted_x_ + 26 : shifted_x_ - 26;
+        el_y1 = upper_eyelid_y;
+        el_x2 = this->is_left_ ? shifted_x_ - 10 : shifted_x_ + 10;
+        el_y2 = upper_eyelid_y;
+        if (open_ratio_ < 0.99f) {
+            // mask
+            // top:shifted_y_ - this->height_ / 2
+            // bottom: upper_eyelid_y
+            canvas->fillRect(
+                shifted_x_ - (this->width_ / 2), shifted_y_ - this->height_ / 2,
+                this->width_ + 1,
+                upper_eyelid_y - 2 - (shifted_y_ - this->height_ / 2),
+                background_color_);
+
+            // eyelid
+            canvas->fillRect(shifted_x_ - (this->width_ / 2),
+                             upper_eyelid_y - 2, this->width_, 4,
+                             primary_color_);
+        }
+
+        // eyelash
+        canvas->fillTriangle(el_x0, el_y0, el_x1, el_y1, el_x2, el_y2,
+                             primary_color_);
+    }
+
+    void overwriteOpenRatio() {
+        switch (expression_) {
+            case Expression::Doubt:
+                open_ratio_ = 0.6f;
+                break;
+
+            case Expression::Sleepy:
+                open_ratio_ = 0.0f;
+                break;
+        }
+    }
     void draw(M5Canvas *canvas, BoundingRect rect, DrawContext *ctx) {
         this->update(canvas, rect, ctx);
+        this->overwriteOpenRatio();
         auto wink_base_y =
             shifted_y_ + (1.0f - open_ratio_) * this->height_ / 4;
 
-        // eyelashes
-        uint16_t el_x0, el_y0, el_x1, el_y1, el_x2, el_y2;
-        el_x0 = this->is_left_ ? shifted_x_ + 22 : shifted_x_ - 22;
-        el_y0 = wink_base_y - 32 * open_ratio_ - 27;
-        el_x1 = this->is_left_ ? shifted_x_ + 26 : shifted_x_ - 26;
-        el_y1 = wink_base_y - 32 * open_ratio_;
-        el_x2 = this->is_left_ ? shifted_x_ - 10 : shifted_x_ + 10;
-        el_y2 = wink_base_y - 32 * open_ratio_;
-        canvas->fillTriangle(el_x0, el_y0, el_x1, el_y1, el_x2, el_y2,
-                             primary_color_);
         uint32_t thickness = 4;
-        if (open_ratio_ == 0 || expression_ == Expression::Sleepy) {
-            // eye closed
-            // NOTE: the center of closed eye is lower than the center of bbox
-            canvas->fillRect(shifted_x_ - (this->width_ / 2), wink_base_y - 2,
-                             this->width_, 4, primary_color_);
-            return;
-        } else if (expression_ == Expression::Happy) {
+        if (expression_ == Expression::Happy) {
             canvas->fillEllipse(shifted_x_,
                                 wink_base_y + (1 / 8) * this->height_,
                                 this->width_ / 2, this->height_ / 4 + thickness,
@@ -168,35 +198,41 @@ class GirlyEye : public BaseEye {
             canvas->fillRect(shifted_x_ - this->width_ / 2,
                              wink_base_y + thickness / 2, this->width_,
                              this->height_ / 4, background_color_);
+            this->drawEyeLid(canvas);
             return;
         }
         // canvas->fillArc
-        // bg
-        canvas->fillEllipse(shifted_x_, shifted_y_, this->width_ / 2,
-                            this->height_ / 2, primary_color_);
-        canvas->fillEllipse(shifted_x_, shifted_y_,
-                            this->width_ / 2 - thickness,
-                            this->height_ / 2 - thickness, secondary_color_);
-        // upper half moon
-        canvas->fillArc(shifted_x_, shifted_y_, width_ / 2, 0, 180.0f, 360.0f,
-                        primary_color_);
+        if (open_ratio_ > 0.1f) {
+            // bg
+            canvas->fillEllipse(shifted_x_, shifted_y_, this->width_ / 2,
+                                this->height_ / 2, primary_color_);
+            canvas->fillEllipse(
+                shifted_x_, shifted_y_, this->width_ / 2 - thickness,
+                this->height_ / 2 - thickness, secondary_color_);
+            // upper half moon
+            canvas->fillArc(shifted_x_, shifted_y_, width_ / 2, 0, 180.0f,
+                            360.0f, primary_color_);
 
-        canvas->fillEllipse(shifted_x_, shifted_y_, this->width_ / 4,
-                            this->height_ / 4, primary_color_);
-        // high light
-        canvas->fillEllipse(shifted_x_ - width_ / 6, shifted_y_ - height_ / 6,
-                            width_ / 8, height_ / 8, 0xffffff);
+            canvas->fillEllipse(shifted_x_, shifted_y_, this->width_ / 4,
+                                this->height_ / 4, primary_color_);
+            // high light
+            canvas->fillEllipse(shifted_x_ - width_ / 6,
+                                shifted_y_ - height_ / 6, width_ / 8,
+                                height_ / 8, 0xffffff);
+        }
         // note: you cannot define variable in switch scope
         int x0, y0, x1, y1, x2, y2;
         switch (expression_) {
             case Expression::Angry:
-                x0 = shifted_x_ - width_ / 2;
+                x0 = shifted_x_;  // center
                 y0 = shifted_y_ - height_ / 2;
-                x1 = shifted_x_ + width_ / 2;
+                x1 = this->is_left_ ? shifted_x_ - width_ / 2
+                                    : shifted_x_ + width_ / 2;  // upper inner
                 y1 = y0;
-                x2 = this->is_left_ ? x0 : x1;
+                x2 = x1;
                 y2 = shifted_y_ - height_ / 4;
-                canvas->fillTriangle(x0, y0, x1, y1, x2, y2, background_color_);
+                canvas->fillTriangle(x0, y0, x1, y1, x2, y2,
+                                     background_color_);  // mask
                 break;
             case Expression::Sad:
                 x0 = shifted_x_ - width_ / 2;
@@ -205,25 +241,17 @@ class GirlyEye : public BaseEye {
                 y1 = y0;
                 x2 = this->is_left_ ? x1 : x0;
                 y2 = shifted_y_ - height_ / 4;
-                canvas->fillTriangle(x0, y0, x1, y1, x2, y2, background_color_);
+                canvas->fillTriangle(x0, y0, x1, y1, x2, y2,
+                                     background_color_);  // mask
                 break;
             case Expression::Doubt:
-                // top left
-                x0 = shifted_x_ - width_ / 2;
-                y0 = shifted_y_ - height_ / 2;
-                // bottom right
-                x1 = shifted_x_ + width_ / 2;
-                y1 = shifted_y_ - height_ / 4;
-
-                canvas->fillRect(x0, y0, x1 - x0, y1 - y0, background_color_);
                 break;
             case Expression::Sleepy:
-
                 break;
-
             default:
                 break;
         }
+        this->drawEyeLid(canvas);
     }
 };
 
