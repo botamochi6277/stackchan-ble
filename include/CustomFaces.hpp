@@ -38,6 +38,20 @@ class GirlyFace : public Face {
                new Eyeblow(15, 0, true), new BoundingRect(72, 230)) {}
 };
 
+class PinkDemonFace : public Face {
+   public:
+    PinkDemonFace()
+        : Face(new UShapeMouth(64, 64, 0, 16), new BoundingRect(214, 160),
+               // right eye, second eye arg is center position of eye
+               new PinkDemonEye(52, 134, false), new BoundingRect(134, 106),
+               //  left eye
+               new PinkDemonEye(52, 134, true), new BoundingRect(134, 218),
+
+               //  hide eye brows with setting these height zero
+               new Eyeblow(15, 0, false), new BoundingRect(67, 96),
+               new Eyeblow(15, 0, true), new BoundingRect(72, 230)) {}
+};
+
 }  // namespace m5avatar
 
 #endif  // CUSTOM_FACES_HPP_

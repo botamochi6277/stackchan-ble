@@ -228,7 +228,7 @@ class GirlyEye : public BaseEye {
             canvas->fillRect(shifted_x_ - this->width_ / 2,
                              wink_base_y + thickness / 2, this->width_,
                              this->height_ / 4, background_color_);
-            this->drawEyeLid(canvas);
+            // this->drawEyeLid(canvas);
             return;
         }
         // main eye
@@ -236,9 +236,11 @@ class GirlyEye : public BaseEye {
             // bg
             canvas->fillEllipse(shifted_x_, shifted_y_, this->width_ / 2,
                                 this->height_ / 2, primary_color_);
-            canvas->fillEllipse(
-                shifted_x_, shifted_y_, this->width_ / 2 - thickness,
-                this->height_ / 2 - thickness, secondary_color_);
+
+            uint16_t accent_color = M5.Lcd.color24to16(0x019E73);
+            canvas->fillEllipse(shifted_x_, shifted_y_,
+                                this->width_ / 2 - thickness,
+                                this->height_ / 2 - thickness, accent_color);
             // upper half moon
             canvas->fillArc(shifted_x_, shifted_y_, width_ / 2, 0, 180.0f,
                             360.0f, primary_color_);
@@ -254,6 +256,113 @@ class GirlyEye : public BaseEye {
     }
 };
 
+class PinkDemonEye : public BaseEye {
+   public:
+    using BaseEye::BaseEye;
+
+    void drawEyeLid(M5Canvas *canvas) {
+        // eyelid
+        auto upper_eyelid_y = shifted_y_ - 0.8f * height_ / 2 +
+                              (1.0f - open_ratio_) * this->height_ * 0.6;
+
+        float el_x0, el_y0, el_x1, el_y1, el_x2, el_y2;
+        el_x0 = this->is_left_ ? shifted_x_ + 22 : shifted_x_ - 22;
+        el_y0 = upper_eyelid_y - 27;
+        el_x1 = this->is_left_ ? shifted_x_ + 26 : shifted_x_ - 26;
+        el_y1 = upper_eyelid_y;
+        el_x2 = this->is_left_ ? shifted_x_ - 10 : shifted_x_ + 10;
+        el_y2 = upper_eyelid_y;
+
+        float tilt = 0.0f;
+        float ref_tilt = open_ratio_ * M_PI / 6.0f;
+        float bias;
+        if (expression_ == Expression::Angry) {
+            tilt = this->is_left_ ? -ref_tilt : ref_tilt;
+        } else if (expression_ == Expression::Sad) {
+            tilt = this->is_left_ ? ref_tilt : -ref_tilt;
+        }
+        bias = 0.2f * width_ * tilt / (M_PI / 6.0f);
+
+        if ((open_ratio_ < 0.99f) || (abs(tilt) > 0.1f)) {
+            // mask
+            // top:shifted_y_ - this->height_ / 2
+            // bottom: upper_eyelid_y
+            float mask_top_left_x = shifted_x_ - (this->width_ / 2);
+            float mask_top_left_y = shifted_y_ - 0.75f * this->height_;
+            float mask_bottom_right_x = shifted_x_ + (this->width_ / 2);
+            float mask_bottom_right_y = upper_eyelid_y;
+
+            fillRectRotatedAround(canvas, mask_top_left_x, mask_top_left_y,
+                                  mask_bottom_right_x, mask_bottom_right_y,
+                                  tilt, shifted_x_, upper_eyelid_y,
+                                  background_color_);
+
+            // eyelid
+            float eyelid_top_left_x = shifted_x_ - (this->width_ / 2) + bias;
+            float eyelid_top_left_y = upper_eyelid_y - 4;
+            float eyelid_bottom_right_x =
+                shifted_x_ + (this->width_ / 2) + bias;
+            float eyelid_bottom_right_y = upper_eyelid_y;
+
+            fillRectRotatedAround(canvas, eyelid_top_left_x, eyelid_top_left_y,
+                                  eyelid_bottom_right_x, eyelid_bottom_right_y,
+                                  tilt, shifted_x_, upper_eyelid_y,
+                                  primary_color_);
+
+            el_x0 += bias;
+            el_x1 += bias;
+            el_x2 += bias;
+        }
+
+        // eyelash
+        rotatePointAround(el_x0, el_y0, tilt, shifted_x_, upper_eyelid_y);
+        rotatePointAround(el_x1, el_y1, tilt, shifted_x_, upper_eyelid_y);
+        rotatePointAround(el_x2, el_y2, tilt, shifted_x_, upper_eyelid_y);
+        // canvas->fillTriangle(el_x0, el_y0, el_x1, el_y1, el_x2, el_y2,
+        //                      primary_color_);
+    }
+
+    void overwriteOpenRatio() {
+        switch (expression_) {
+            case Expression::Doubt:
+                open_ratio_ = 0.6f;
+                break;
+
+            case Expression::Sleepy:
+                open_ratio_ = 0.0f;
+                break;
+        }
+    }
+
+    void draw(M5Canvas *canvas, BoundingRect rect, DrawContext *ctx) {
+        this->update(canvas, rect, ctx);
+        this->overwriteOpenRatio();
+        uint32_t thickness = 8;
+
+        // main eye
+        if (open_ratio_ > 0.1f) {
+            // bg
+            canvas->fillEllipse(shifted_x_, shifted_y_, this->width_ / 2,
+                                this->height_ / 2, primary_color_);
+            uint16_t accent_color = M5.Lcd.color24to16(0x00A1FF);
+            canvas->fillEllipse(shifted_x_, shifted_y_,
+                                this->width_ / 2 - thickness,
+                                this->height_ / 2 - thickness, accent_color);
+            // upper
+            uint16_t w1 = width_ * 0.92f;
+            uint16_t h1 = this->height_ * 0.69f;
+            uint16_t y1 = shifted_y_ - this->height_ / 2 + h1 / 2;
+            canvas->fillEllipse(shifted_x_, y1, w1 / 2, h1 / 2, primary_color_);
+            // high light
+            uint16_t w2 = width_ * 0.577f;
+            uint16_t h2 = this->height_ * 0.4f;
+            uint16_t y2 = shifted_y_ - this->height_ / 2 + thickness + h2 / 2;
+
+            canvas->fillEllipse(shifted_x_, y2, w2 / 2, h2 / 2, 0xffffff);
+        }
+        this->drawEyeLid(canvas);
+    }
+};
 }  // namespace m5avatar
 
 #endif

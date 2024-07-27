@@ -44,7 +44,7 @@ m5avatar::ColorPalette* color_palettes[4];
 const uint8_t color_palettes_size = 4U;
 uint8_t color_palettes_idx = 0;
 
-m5avatar::Face* faces[3];
+m5avatar::Face* faces[4];
 const int faces_length = sizeof(faces) / sizeof(m5avatar::Face*);
 int face_idx = 0;
 
@@ -59,6 +59,7 @@ void setup() {
     faces[0] = avatar.getFace();
     faces[1] = new m5avatar::FbkFace();
     faces[2] = new m5avatar::GirlyFace();
+    faces[3] = new m5avatar::PinkDemonFace();
 
     color_palettes[0] = new m5avatar::ColorPalette();
     color_palettes[1] = new m5avatar::ColorPalette();
