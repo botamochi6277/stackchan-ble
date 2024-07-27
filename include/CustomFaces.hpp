@@ -7,8 +7,10 @@
 #include <Face.h>
 #include <M5Unified.h>  // TODO(meganetaaan): include only the Sprite function not a whole library
 
+#include "CustomEyebrows.hpp"
 #include "CustomEyes.hpp"
 #include "CustomMouths.hpp"
+
 namespace m5avatar {
 
 class FbkFace : public Face {
@@ -33,9 +35,12 @@ class GirlyFace : public Face {
                //  left eye
                new GirlyEye(84, 84, true), new BoundingRect(163, 256),
 
-               //  hide eye brows with setting these height zero
-               new Eyeblow(15, 0, false), new BoundingRect(67, 96),
-               new Eyeblow(15, 0, true), new BoundingRect(72, 230)) {}
+               // right eyebrow
+               new EllipseEyebrow(36, 20, false),
+               new BoundingRect(97 + 10, 84 + 18),  // (y,x)
+                                                    //  left eyebrow
+               new EllipseEyebrow(36, 20, true),
+               new BoundingRect(107, 200 + 18)) {}
 };
 
 class PinkDemonFace : public Face {
