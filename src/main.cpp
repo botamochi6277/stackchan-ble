@@ -44,7 +44,7 @@ m5avatar::ColorPalette* color_palettes[4];
 const uint8_t color_palettes_size = 4U;
 uint8_t color_palettes_idx = 0;
 
-m5avatar::Face* faces[4];
+m5avatar::Face* faces[5];
 const int faces_length = sizeof(faces) / sizeof(m5avatar::Face*);
 int face_idx = 0;
 
@@ -59,7 +59,8 @@ void setup() {
     faces[0] = avatar.getFace();
     faces[1] = new m5avatar::FbkFace();
     faces[2] = new m5avatar::GirlyFace();
-    faces[3] = new m5avatar::PinkDemonFace();
+    faces[3] = new m5avatar::GirlyFace2();
+    faces[4] = new m5avatar::PinkDemonFace();
 
     color_palettes[0] = new m5avatar::ColorPalette();
     color_palettes[1] = new m5avatar::ColorPalette();
@@ -75,7 +76,7 @@ void setup() {
     // end of FBK Palette
     color_palettes[2]->set(COLOR_PRIMARY, TFT_DARKGREY);
     color_palettes[2]->set(COLOR_BACKGROUND, TFT_WHITE);
-    color_palettes[3]->set(COLOR_PRIMARY, TFT_RED);
+    color_palettes[3]->set(COLOR_PRIMARY, TFT_BLACK);
     color_palettes[3]->set(COLOR_BACKGROUND, TFT_PINK);
 
     avatar.init(8);  // start drawing w/ 8bit color mode

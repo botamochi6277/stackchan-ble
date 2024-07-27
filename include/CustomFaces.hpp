@@ -43,6 +43,22 @@ class GirlyFace : public Face {
                new BoundingRect(107, 200 + 18)) {}
 };
 
+class GirlyFace2 : public Face {
+   public:
+    GirlyFace2()
+        : Face(new UShapeMouth(44, 44, 0, 16), new BoundingRect(222, 160),
+               // right eye, second eye arg is center position of eye
+               new GirlyEye(84, 84, false), new BoundingRect(163, 64),
+               //  left eye
+               new GirlyEye(84, 84, true), new BoundingRect(163, 256),
+
+               // right eyebrow
+               new BowEyebrow(160, 160, false),
+               new BoundingRect(163, 64),  // (y,x)
+                                           //  left eyebrow
+               new BowEyebrow(160, 160, true), new BoundingRect(163, 256)) {}
+};
+
 class PinkDemonFace : public Face {
    public:
     PinkDemonFace()

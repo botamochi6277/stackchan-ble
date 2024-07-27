@@ -60,6 +60,22 @@ class EllipseEyebrow : public BaseEyebrow {
     }
 };
 
+class BowEyebrow : public BaseEyebrow {
+   public:
+    using BaseEyebrow::BaseEyebrow;
+
+    void draw(M5Canvas *canvas, BoundingRect rect, DrawContext *ctx) {
+        this->update(canvas, rect, ctx);
+        uint8_t thickness = 4;
+
+        float angle0 = is_left_ ? 180.0f + 35.0f : 180.0f + 45.0f;
+        float stroke_angle = 100.0f;
+        canvas->fillArc(center_x_, center_y_, width_ / 2,
+                        width_ / 2 - thickness, angle0, angle0 + stroke_angle,
+                        primary_color_);
+    }
+};
+
 }  // namespace m5avatar
 
 #endif
