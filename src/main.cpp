@@ -54,7 +54,11 @@ void setup() {
     st.pSerial = &Serial1;
 #endif
 
-    M5.begin();
+#ifdef ARDUINO_M5STACK_CORES3
+    auto cfg = M5.config();  // default config?
+    cfg.output_power = false;
+    M5.begin(cfg);
+#endif
 
     faces[0] = avatar.getFace();
     faces[1] = new m5avatar::FbkFace();
