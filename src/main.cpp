@@ -4,8 +4,9 @@
 #include <M5Unified.h>
 #include <TaskManager.h>
 
+#include <faces/FaceTemplates.hpp>
+
 #include "BLEStackchanService.hpp"
-#include "CustomFaces.hpp"
 #include "PanTiltManager.hpp"
 
 #ifdef FEETECH
@@ -61,7 +62,7 @@ void setup() {
 #endif
 
     faces[0] = avatar.getFace();
-    faces[1] = new m5avatar::FbkFace();
+    faces[1] = new m5avatar::OmegaFace();
     faces[2] = new m5avatar::GirlyFace();
     faces[3] = new m5avatar::GirlyFace2();
     faces[4] = new m5avatar::PinkDemonFace();
