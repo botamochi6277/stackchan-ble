@@ -79,7 +79,10 @@ class StackchanService : public BLEService {
     //  characteristics
     BLEUnsignedLongCharacteristic timer_chr;
 
-    // facial
+    // facial style
+    BLEUnsignedCharCharacteristic face_chr;
+
+    // facial motion
     BLEUnsignedCharCharacteristic facial_expression_chr;
     BLEUnsignedCharCharacteristic facial_color_chr;
     BLEUnsignedCharCharacteristic mouse_open_ratio_chr;
@@ -101,6 +104,9 @@ class StackchanService : public BLEService {
 
     void servoPoll(stackchan::PanTiltManager &manager);
 
+    void facePoll(m5avatar::Avatar &avatar, m5avatar::Face *faces[],
+                  uint8_t face_size);
+
     void facialExpressionPoll(m5avatar::Avatar &avatar,
                               const m5avatar::Expression expressions[],
                               uint8_t expression_size);
@@ -115,6 +121,7 @@ class StackchanService : public BLEService {
 StackchanService::StackchanService()
     : BLEService("671e0000-8cef-46b7-8af3-2eddeb12803e"),
       timer_chr("671e0001-8cef-46b7-8af3-2eddeb12803e", BLERead | BLENotify),
+      face_chr("671e0100-8cef-46b7-8af3-2eddeb12803e", BLERead | BLEWrite),
       facial_expression_chr("671e1000-8cef-46b7-8af3-2eddeb12803e",
                             BLERead | BLEWrite),
       facial_color_chr("671e1002-8cef-46b7-8af3-2eddeb12803e",
@@ -133,6 +140,7 @@ StackchanService::StackchanService()
                            BLERead | BLEWrite) {
     // add characteristics to service
     this->addCharacteristic(this->timer_chr);
+    this->addCharacteristic(this->face_chr);
     this->addCharacteristic(this->facial_expression_chr);
     this->addCharacteristic(this->facial_color_chr);
     this->addCharacteristic(this->mouse_open_ratio_chr);
@@ -146,8 +154,11 @@ StackchanService::StackchanService()
     BLEDescriptor timer_descriptor("2901", "timer_ms");
     this->timer_chr.addDescriptor(timer_descriptor);
 
-    BLEDescriptor facial_descriptor("2901", "facial expression");
-    this->facial_expression_chr.addDescriptor(facial_descriptor);
+    BLEDescriptor face_descriptor("2901", "face");
+    this->face_chr.addDescriptor(face_descriptor);
+
+    BLEDescriptor facial_expression_descriptor("2901", "facial expression");
+    this->facial_expression_chr.addDescriptor(facial_expression_descriptor);
     BLEDescriptor facial_color_descriptor("2901", "facial color");
     this->facial_color_chr.addDescriptor(facial_color_descriptor);
     BLEDescriptor mouse_or_descriptor("2901", "mouse open ratio");
@@ -168,6 +179,9 @@ StackchanService::StackchanService()
     // Format Description
     BLEDescriptor millisec_descriptor("2904", this->msec_format_, 7);
     this->timer_chr.addDescriptor(millisec_descriptor);
+
+    BLEDescriptor face_fmt_descriptor("2904", this->cmd_format_, 7);
+    this->face_chr.addDescriptor(face_fmt_descriptor);
 
     BLEDescriptor facial_exp_descriptor("2904", this->cmd_format_, 7);
     this->facial_expression_chr.addDescriptor(facial_exp_descriptor);
@@ -276,6 +290,19 @@ void StackchanService::servoPoll(stackchan::PanTiltManager &manager) {
 }
 
 #endif
+
+void StackchanService::facePoll(m5avatar::Avatar &avatar,
+                                m5avatar::Face *faces[], uint8_t face_size) {
+    if (this->face_chr.written()) {
+        auto idx = this->face_chr.value();
+        if (face_size <= idx) {
+            return;
+        }
+
+        avatar.setFace(faces[idx]);
+    }
+}
+
 void StackchanService::facialExpressionPoll(
     m5avatar::Avatar &avatar, const m5avatar::Expression expressions[],
     uint8_t expression_size) {

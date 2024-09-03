@@ -59,7 +59,11 @@ void setup() {
     auto cfg = M5.config();  // default config?
     cfg.output_power = false;
     M5.begin(cfg);
+#else
+    M5.begin();
 #endif
+    M5.Lcd.setBrightness(30);
+    M5.Lcd.clear();
 
     faces[0] = avatar.getFace();
     faces[1] = new m5avatar::OmegaFace();
@@ -85,6 +89,7 @@ void setup() {
     color_palettes[3]->set(COLOR_BACKGROUND, TFT_PINK);
 
     avatar.init(8);  // start drawing w/ 8bit color mode
+    avatar.setColorPalette(*color_palettes[0]);
 
     if (!BLE.begin()) {
         // "starting BLE failed!"
@@ -169,6 +174,7 @@ void setup() {
     Tasks
         .add("Facial_Update",
              [] {
+                 stackchan_srv.facePoll(avatar, faces, faces_length);
                  stackchan_srv.facialExpressionPoll(avatar, expressions,
                                                     expressions_size);
                  stackchan_srv.facialColorPoll(avatar, color_palettes,
