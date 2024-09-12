@@ -7,6 +7,7 @@
 #include <faces/FaceTemplates.hpp>
 
 #include "BLEStackchanService.hpp"
+#include "LeonaFace.hpp"
 #include "PanTiltManager.hpp"
 
 #ifdef FEETECH
@@ -62,13 +63,13 @@ void setup() {
 #else
     M5.begin();
 #endif
-    M5.Lcd.setBrightness(30);
+    M5.Lcd.setBrightness(100);
     M5.Lcd.clear();
 
     faces[0] = avatar.getFace();
-    faces[1] = new m5avatar::OmegaFace();
+    faces[1] = new m5avatar::LeonaFace();
     faces[2] = new m5avatar::GirlyFace();
-    faces[3] = new m5avatar::GirlyFace2();
+    faces[3] = new m5avatar::OmegaFace();
     faces[4] = new m5avatar::PinkDemonFace();
 
     color_palettes[0] = new m5avatar::ColorPalette();
@@ -81,7 +82,7 @@ void setup() {
     color_palettes[1]->set(COLOR_BACKGROUND,
                            M5.Lcd.color24to16(0xfac2a8));  // skin
     color_palettes[1]->set(COLOR_SECONDARY,
-                           TFT_PINK);  // cheek
+                           M5.Lcd.color24to16(0xea9c60));  // cheek
     // end of FBK Palette
     color_palettes[2]->set(COLOR_PRIMARY, TFT_DARKGREY);
     color_palettes[2]->set(COLOR_BACKGROUND, TFT_WHITE);
