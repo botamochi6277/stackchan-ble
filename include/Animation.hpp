@@ -140,12 +140,12 @@ class AnimationController {
   // prev_position
 
  public:
-  STSServoDriver servo_manager;
+  STSServoDriver servo_driver;
   JointServoMap joint_servo_map;
 
   AnimationController(/* args */);
   ~AnimationController();
-  void poll();
+  void update();
   void setClip(unsigned short id, AnimationClip& clip);
   void play(unsigned short clip_id);
 };
@@ -163,7 +163,7 @@ void AnimationController::play(unsigned short clip_id) {
   this->clips_[clip_id].play(step_);
 }
 
-void AnimationController::poll() {
+void AnimationController::update() {
   step_ += 1;
   for (unsigned short i = 0; i < MAX_ANIM_CLIP_NUM; i++) {
     if (!this->clips_[i].isPlaying(step_)) {
@@ -172,7 +172,7 @@ void AnimationController::poll() {
     auto pos = this->clips_[i].emulate(step_);
 
     // send position to servo
-    this->servo_manager.setTargetPosition(
+    this->servo_driver.setTargetPosition(
         this->joint_servo_map.get(this->clips_[i].getJointName()), pos);
   }
 }

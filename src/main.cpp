@@ -6,19 +6,29 @@
 
 #include <faces/FaceTemplates.hpp>
 
+#include "Animation.hpp"
 #include "BLEStackchanService.hpp"
 #include "LeonaFace.hpp"
-
-#ifdef FEETECH
 #include "STSServoDriver.h"
-#else
-#include <ESP32Servo.h>
+
+#if defined(ARDUINO_M5Stack_ATOM)
+#define RXD 32
+#define TXD 26
+#elif defined(ARDUINO_M5STACK_Core2)
+#define RXD 33
+#define TXD 32
+#elif defined(ARDUINO_XIAO_ESP32C3)
+#define RXD 7
+#define TXD 6
 #endif
+
 m5avatar::Avatar avatar;
 ble::StackchanService stackchan_srv;
 
-const uint8_t servo_pan_id = 19;
-const uint8_t servo_tilt_id = 27;
+STSServoDriver servo_driver;
+botamochi::AnimationController anim_controller;
+const uint8_t servo_pan_id = 1;
+const uint8_t servo_tilt_id = 2;
 
 // short max_sweep = 4095;
 // short min_sweep = 0;
@@ -49,18 +59,14 @@ const int faces_length = sizeof(faces) / sizeof(m5avatar::Face*);
 int face_idx = 0;
 
 void setup() {
-#ifdef FEETECH
-  Serial1.begin(1000000, SERIAL_8N1, 19, 27);
-  st.pSerial = &Serial1;
-#endif
-
-#ifdef ARDUINO_M5STACK_CORES3
   auto cfg = M5.config();  // default config?
+#ifdef ARDUINO_M5STACK_CORES3
   cfg.output_power = false;
-  M5.begin(cfg);
-#else
-  M5.begin();
 #endif
+  M5.begin(cfg);
+  Serial1.begin(1000000, SERIAL_8N1, RXD, TXD);
+  delay(1000);  // waiting for connection
+
   M5.Lcd.setBrightness(100);
   M5.Lcd.clear();
 
@@ -94,11 +100,9 @@ void setup() {
     // "starting BLE failed!"
     avatar.setSpeechText("BLE is unavailable");
   }
-#ifdef FEETECH
   if (!Serial1.available()) {
     avatar.setSpeechText("Serial1 is unavailable");
   }
-#endif
 
   // ## beginning Bluetooth setup
   String ble_address = BLE.address();
@@ -114,27 +118,14 @@ void setup() {
   BLE.advertise();
 
   // ## Servo setting
-
-#ifdef FEETECH
+  anim_controller.servo_driver = servo_driver;
+  anim_controller.joint_servo_map.set(botamochi::JointName::kHeadPan,
+                                      servo_pan_id);
+  anim_controller.joint_servo_map.set(botamochi::JointName::kHeadTilt,
+                                      servo_tilt_id);
   // init position
-  st.RegWritePosEx(servo_pan_id, max_sweep / 2, speed, acc);
-  st.RegWritePosEx(servo_tilt_id, max_sweep / 2, speed, acc);
-  st.RegWriteAction();
-  // delay(1884);  //[(P1-P0)/Speed]*1000+[Speed/(Acc*100)]*1000
-#else
-  ESP32PWM::allocateTimer(0);
-  ESP32PWM::allocateTimer(1);
-  ESP32PWM::allocateTimer(2);
-  ESP32PWM::allocateTimer(3);
-
-  // servo_pan.setPeriodHertz(50);   // standard 50 hz servo
-  // servo_tilt.setPeriodHertz(50);  // standard 50 hz servo
-
-  stackchan_srv.pan_limit.min = 90 - 30;  // yaw
-  stackchan_srv.pan_limit.max = 90 + 30;
-  stackchan_srv.tilt_limit.min = 90 - 40;  // pitch
-  stackchan_srv.tilt_limit.max = 90 + 10;
-#endif
+  servo_driver.setTargetPosition(servo_pan_id, IDLE_POSITION);
+  servo_driver.setTargetPosition(servo_tilt_id, IDLE_POSITION);
 
   // ## register tasks
   Tasks.setAutoErase(true);
@@ -166,7 +157,7 @@ void setup() {
       .add("BLE_polling",
            [] {
              BLE.poll();
-             stackchan_srv.servoPoll(pan_tilt_manager);
+             //  stackchan_srv.servoPoll(pan_tilt_manager);
            })
       ->startFps(10);
   Tasks
@@ -181,7 +172,7 @@ void setup() {
            })
       ->startFps(30);
 
-  Tasks.add("PanTilt_Update", [] { pan_tilt_manager.update(); })->startFps(60);
+  Tasks.add("Animation_Update", [] { anim_controller.update(); })->startFps(10);
 }
 
 void loop() {
