@@ -3,7 +3,7 @@
 #define BOTAMOCHI_ANIMATION_HPP
 
 #define ANIM_BUFF_LENGTH 8
-#define IDLE_POSITION 512
+#define IDLE_POSITION 511
 #define MAX_ANIM_CLIP_NUM 8
 #include <STSServoDriver.h>
 
@@ -54,16 +54,22 @@ AnimationClip::AnimationClip()
     : joint_name_(JointName::kHeadPan),
       positions_({IDLE_POSITION}),
       keyframes_({IDLE_POSITION}),
-      length_(1) {}
+      length_(1),
+      last_play_frame_id_(-1) {}
 AnimationClip::AnimationClip(JointName joint_name, unsigned short positions[],
                              unsigned short keyframes[],
                              unsigned short length) {
   for (unsigned short i = 0; i < length; i++) {
+    if (length >= ANIM_BUFF_LENGTH) {
+      break;
+    }
+
     this->positions_[i] = positions[i];
     this->keyframes_[i] = keyframes[i];
   }
   joint_name_ = joint_name;
   length_ = length;
+  last_play_frame_id_ = -1;
 }
 
 bool AnimationClip::isPlaying(unsigned short current_frame_id) {

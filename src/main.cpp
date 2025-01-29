@@ -14,21 +14,32 @@
 #if defined(ARDUINO_M5Stack_ATOM)
 #define RXD 32
 #define TXD 26
+#elif defined(ARDUINO_M5Stack_Core_ESP32)
+// port A
+#define RXD 22  // SCL
+#define TXD 21  // SDA
 #elif defined(ARDUINO_M5STACK_Core2)
-#define RXD 33
-#define TXD 32
+#define RXD 33  // SCL
+#define TXD 32  // SDA
 #elif defined(ARDUINO_XIAO_ESP32C3)
 #define RXD 7
 #define TXD 6
 #endif
 
 m5avatar::Avatar avatar;
+char balloon_text[20];
 ble::StackchanService stackchan_srv;
 
-STSServoDriver servo_driver;
+// STSServoDriver servo_driver;
 botamochi::AnimationController anim_controller;
 const uint8_t servo_pan_id = 1;
 const uint8_t servo_tilt_id = 2;
+
+unsigned short tmp_pos[] = {IDLE_POSITION, IDLE_POSITION - 100,
+                            IDLE_POSITION + 100, IDLE_POSITION};
+unsigned short tmp_key[] = {0, 10, 20, 30};
+botamochi::AnimationClip my_clip1(botamochi::JointName::kHeadTilt, tmp_pos,
+                                  tmp_key, 4);
 
 // short max_sweep = 4095;
 // short min_sweep = 0;
@@ -60,11 +71,13 @@ int face_idx = 0;
 
 void setup() {
   auto cfg = M5.config();  // default config?
+
 #ifdef ARDUINO_M5STACK_CORES3
   cfg.output_power = false;
 #endif
   M5.begin(cfg);
-  Serial1.begin(1000000, SERIAL_8N1, RXD, TXD);
+  Serial.begin(115200);
+  Serial2.begin(1000000, SERIAL_8N1, RXD, TXD);
   delay(1000);  // waiting for connection
 
   M5.Lcd.setBrightness(100);
@@ -99,9 +112,14 @@ void setup() {
   if (!BLE.begin()) {
     // "starting BLE failed!"
     avatar.setSpeechText("BLE is unavailable");
+  } else {
+    M5_LOGD("BLE is available");
   }
-  if (!Serial1.available()) {
-    avatar.setSpeechText("Serial1 is unavailable");
+
+  if (!Serial2) {
+    avatar.setSpeechText("Serial2 is not connected");
+  } else {
+    M5_LOGD("Serial2 is connected");
   }
 
   // ## beginning Bluetooth setup
@@ -118,15 +136,45 @@ void setup() {
   BLE.advertise();
 
   // ## Servo setting
-  anim_controller.servo_driver = servo_driver;
+  auto is_connected = anim_controller.servo_driver.init(&Serial2);
+  if (!is_connected) {
+    avatar.setSpeechText("servo is not connected");
+  } else {
+    avatar.setSpeechText("servo is connected");
+  }
+
   anim_controller.joint_servo_map.set(botamochi::JointName::kHeadPan,
                                       servo_pan_id);
   anim_controller.joint_servo_map.set(botamochi::JointName::kHeadTilt,
                                       servo_tilt_id);
-  // init position
-  servo_driver.setTargetPosition(servo_pan_id, IDLE_POSITION);
-  servo_driver.setTargetPosition(servo_tilt_id, IDLE_POSITION);
+  avatar.setSpeechText("Scaning servos...");
+  for (size_t i = 1; i < 3; i++) {
+    bool b = anim_controller.servo_driver.ping(i);
+    anim_controller.servo_driver.getCurrentPosition(
+        i);  // execute determineServoType
+  }
 
+  // initial move
+  avatar.setSpeechText("moving to 400");
+  anim_controller.servo_driver.setTargetPosition(servo_pan_id, 400);
+  anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 400);
+  delay(3000);  // wait for servo to move
+  avatar.setSpeechText("moving to 601");
+  anim_controller.servo_driver.setTargetPosition(servo_pan_id, 601);
+  anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 601);
+  delay(3000);  // wait for servo to move
+  avatar.setSpeechText("moving to 511");
+  anim_controller.servo_driver.setTargetPosition(servo_pan_id, IDLE_POSITION);
+  anim_controller.servo_driver.setTargetPosition(servo_tilt_id, IDLE_POSITION);
+  delay(3000);  // wait for servo to move
+
+  anim_controller.setClip(0, my_clip1);
+
+  // sprintf(balloon_text, "servo 01 pos: %d",
+  //         anim_controller.servo_driver.getCurrentPosition(1));  // 14338???
+  // avatar.setSpeechText(balloon_text);
+
+  M5_LOGI("setting tasks...");
   // ## register tasks
   Tasks.setAutoErase(true);
   Tasks
@@ -173,6 +221,8 @@ void setup() {
       ->startFps(30);
 
   Tasks.add("Animation_Update", [] { anim_controller.update(); })->startFps(10);
+
+  anim_controller.play(0);
 }
 
 void loop() {

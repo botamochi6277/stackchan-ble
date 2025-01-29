@@ -60,3 +60,18 @@ Central---|BLE|stackchan_service
   ]
 }
 ```
+
+## Animation
+
+```mermaid
+graph TB
+
+subgraph clips
+  clip1
+  clip2
+end
+
+update_timestamp
+
+
+```
