@@ -31,16 +31,24 @@ char balloon_text[20];
 ble::StackchanService stackchan_srv;
 
 // STSServoDriver servo_driver;
-botamochi::AnimationController anim_controller;
+#define ANIMATION_FPS 10
+botamochi::AnimationController anim_controller(ANIMATION_FPS);
 const uint8_t servo_pan_id = 1;
 const uint8_t servo_tilt_id = 2;
-
-unsigned short tmp_pos[] = {IDLE_POSITION, IDLE_POSITION - 100,
-                            IDLE_POSITION + 100, IDLE_POSITION};
+unsigned short anim_clip_id = 0;
+unsigned short tmp_pos[] = {IDLE_POSITION,
+                            IDLE_POSITION + 50,  // slightly look up
+                            IDLE_POSITION - 100, IDLE_POSITION};
 unsigned short tmp_key[] = {0, 10, 20, 30};
-botamochi::AnimationClip my_clip1(botamochi::JointName::kHeadTilt, tmp_pos,
+botamochi::AnimationClip nob_clip(botamochi::JointName::kHeadTilt, tmp_pos,
                                   tmp_key, 4);
-
+// NOTE https://qiita.com/dojyorin/items/4bf068aef2b248f1306e
+botamochi::AnimationClip head_shake_clip(botamochi::JointName::kHeadPan,
+                                         (unsigned short[]){IDLE_POSITION,
+                                                            IDLE_POSITION - 100,
+                                                            IDLE_POSITION + 100,
+                                                            IDLE_POSITION},
+                                         (unsigned short[]){0, 10, 20, 30}, 4);
 // short max_sweep = 4095;
 // short min_sweep = 0;
 // unsigned short speed = 3400;
@@ -168,7 +176,9 @@ void setup() {
   anim_controller.servo_driver.setTargetPosition(servo_tilt_id, IDLE_POSITION);
   delay(3000);  // wait for servo to move
 
-  anim_controller.setClip(0, my_clip1);
+  // register animation clips
+  anim_controller.setClip(0, nob_clip);
+  anim_controller.setClip(1, head_shake_clip);
 
   // sprintf(balloon_text, "servo 01 pos: %d",
   //         anim_controller.servo_driver.getCurrentPosition(1));  // 14338???
@@ -191,6 +201,10 @@ void setup() {
                // stackchan_srv.facial_color_chr.writeValue(color_palettes_idx);
                color_palettes_idx =
                    (color_palettes_idx + 1) % color_palettes_size;
+             }
+             if (M5.BtnC.wasPressed()) {
+               anim_controller.play(anim_clip_id);
+               anim_clip_id = (anim_clip_id + 1) % 2;
              }
            })
       ->startFps(100);
@@ -220,8 +234,10 @@ void setup() {
            })
       ->startFps(30);
 
-  Tasks.add("Animation_Update", [] { anim_controller.update(); })->startFps(10);
+  Tasks.add("Animation_Update", [] { anim_controller.update(); })
+      ->startFps(ANIMATION_FPS);
 
+  avatar.setSpeechText("Playing animation");
   anim_controller.play(0);
 }
 

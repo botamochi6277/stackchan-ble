@@ -263,8 +263,12 @@ void AnimationController::update() {
       continue;
     }
 
-    // this->clips_[clip_id].emulate_position_and_speed(step_, pos, speed);
-    pos = this->clips_[clip_id].emulate(step_);
+    this->clips_[clip_id].emulate_position_and_speed(step_, pos, speed);
+
+    // speed [pulse/frame] -> [pulse/sec]
+    speed /= fps_;
+
+    // pos = this->clips_[clip_id].emulate(step_);
 
     // send position to servo
     this->servo_driver.setTargetPosition(
