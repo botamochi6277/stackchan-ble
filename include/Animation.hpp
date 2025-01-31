@@ -5,6 +5,8 @@
 #define ANIM_BUFF_LENGTH 8
 #define IDLE_POSITION 511
 #define MAX_ANIM_CLIP_NUM 8
+#define NUM_JOINTS 2
+
 #include <STSServoDriver.h>
 
 #include <map>
@@ -29,9 +31,18 @@ enum class JointName : unsigned char {
   kHeadTilt,
 };
 
+enum class AnimationName : unsigned char {
+  kLookFront = 0,
+  kLookUp,
+  kLookDown,
+  kLookLeft,
+  kLookRight,
+  kNod,
+  kShake,
+};
+
 class AnimationClip {
  private:
-  /* data */
   JointName joint_name_;
   unsigned short positions_[ANIM_BUFF_LENGTH];
   unsigned short speeds_[ANIM_BUFF_LENGTH];
