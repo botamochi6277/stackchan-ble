@@ -36,19 +36,27 @@ botamochi::AnimationController anim_controller(ANIMATION_FPS);
 const uint8_t servo_pan_id = 1;
 const uint8_t servo_tilt_id = 2;
 unsigned short anim_clip_id = 0;
-unsigned short tmp_pos[] = {IDLE_POSITION,
-                            IDLE_POSITION + 50,  // slightly look up
-                            IDLE_POSITION - 100, IDLE_POSITION};
+
 unsigned short tmp_key[] = {0, 10, 20, 30};
-botamochi::AnimationClip nob_clip(botamochi::JointName::kHeadTilt, tmp_pos,
-                                  tmp_key, 4);
+botamochi::AnimationClip nob_clip(
+    (botamochi::JointName[]){botamochi::JointName::kHeadPan,
+                             botamochi::JointName::kHeadTilt},
+    (unsigned short[][ANIM_BUFF_LENGTH]){
+        {IDLE_POSITION, IDLE_POSITION, IDLE_POSITION, IDLE_POSITION},  // pan
+        {IDLE_POSITION,
+         IDLE_POSITION + 50,                    // slightly look up
+         IDLE_POSITION - 100, IDLE_POSITION}},  // tilt
+    (unsigned short[]){0, 10, 20, 30}, 4);
+
 // NOTE https://qiita.com/dojyorin/items/4bf068aef2b248f1306e
-botamochi::AnimationClip head_shake_clip(botamochi::JointName::kHeadPan,
-                                         (unsigned short[]){IDLE_POSITION,
-                                                            IDLE_POSITION - 100,
-                                                            IDLE_POSITION + 100,
-                                                            IDLE_POSITION},
-                                         (unsigned short[]){0, 10, 20, 30}, 4);
+botamochi::AnimationClip head_shake_clip(
+    (botamochi::JointName[]){botamochi::JointName::kHeadPan,
+                             botamochi::JointName::kHeadTilt},
+    (unsigned short[][ANIM_BUFF_LENGTH]){
+        {IDLE_POSITION, IDLE_POSITION - 100, IDLE_POSITION + 100,
+         IDLE_POSITION},
+        {IDLE_POSITION, IDLE_POSITION, IDLE_POSITION, IDLE_POSITION}},
+    (unsigned short[]){0, 10, 20, 30}, 4);
 // short max_sweep = 4095;
 // short min_sweep = 0;
 // unsigned short speed = 3400;

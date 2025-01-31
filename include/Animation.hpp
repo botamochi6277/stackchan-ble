@@ -9,7 +9,9 @@
 
 #include <STSServoDriver.h>
 
+#include <initializer_list>
 #include <map>
+
 namespace botamochi {
 
 template <typename T>
@@ -43,9 +45,9 @@ enum class AnimationName : unsigned char {
 
 class AnimationClip {
  private:
-  JointName joint_name_;
-  unsigned short positions_[ANIM_BUFF_LENGTH];
-  unsigned short speeds_[ANIM_BUFF_LENGTH];
+  JointName joint_names_[NUM_JOINTS];
+  unsigned short positions_[NUM_JOINTS][ANIM_BUFF_LENGTH];
+  unsigned short speeds_[NUM_JOINTS][ANIM_BUFF_LENGTH];
   unsigned short keyframes_[ANIM_BUFF_LENGTH];
   unsigned short length_;    // num values of the clip
   unsigned short duration_;  // in frames
@@ -54,75 +56,74 @@ class AnimationClip {
 
  public:
   AnimationClip();
-  AnimationClip(JointName joint_name, unsigned short positions[],
+  AnimationClip(JointName joint_names[],
+                unsigned short positions[][ANIM_BUFF_LENGTH],
                 unsigned short keyframes[], unsigned short length);
   ~AnimationClip();
-  inline JointName getJointName() { return joint_name_; }
-  void setWaypoints(unsigned short positions[], unsigned short keyframes[],
-                    unsigned short length);
+  inline JointName getJointName(unsigned short idx) {
+    return joint_names_[idx];
+  }
+
   bool isPlaying(unsigned short current_frame_id);
   void play(unsigned short current_frame_id);
 
-  unsigned short emulate(unsigned short current_frame_id);
+  unsigned short emulate(unsigned short current_frame_id, JointName joint_name);
 
   void emulate_position_and_speed(unsigned short current_frame_id,
+                                  JointName joint_name,
                                   unsigned short& position,
                                   unsigned short& speed);
 };
 
 AnimationClip::AnimationClip()
-    : joint_name_(JointName::kHeadPan),
-      positions_({IDLE_POSITION, IDLE_POSITION}),
-      speeds_({IDLE_POSITION, IDLE_POSITION}),
+    : joint_names_({JointName::kHeadPan, JointName::kHeadTilt}),
+      positions_(
+          {{IDLE_POSITION, IDLE_POSITION}, {IDLE_POSITION, IDLE_POSITION}}),
+      speeds_({{IDLE_POSITION, IDLE_POSITION}, {IDLE_POSITION, IDLE_POSITION}}),
       keyframes_({0, 10}),
       length_(2),
       last_play_frame_id_(0) {
   duration_ = 10;
   num_played_ = 0;
 }
-AnimationClip::AnimationClip(JointName joint_name, unsigned short positions[],
+AnimationClip::AnimationClip(JointName joint_names[],
+                             unsigned short positions[][ANIM_BUFF_LENGTH],
                              unsigned short keyframes[],
                              unsigned short length) {
-  for (unsigned short i = 0; i < length; i++) {
-    if (length >= ANIM_BUFF_LENGTH) {
-      break;
-    }
+  for (size_t joint_idx = 0; joint_idx < NUM_JOINTS; joint_idx++) {
+    joint_names_[joint_idx] = joint_names[joint_idx];
+    for (unsigned short i = 0; i < length; i++) {
+      if (length >= ANIM_BUFF_LENGTH) {
+        break;
+      }
 
-    this->positions_[i] = positions[i];
-    this->keyframes_[i] = keyframes[i];
-    if (i == 0) {
-      this->speeds_[i] = positions[i + 1] > positions[0]
-                             ? (positions[i + 1] - positions[0])
-                             : (positions[0] - positions[i + 1]);
-    } else if (i == length - 1) {
-      this->speeds_[i] = positions[i] > positions[i - 1]
-                             ? (positions[i] - positions[i - 1])
-                             : (positions[i - 1] - positions[i]);
-    } else {
-      this->speeds_[i] = positions[i + 1] > positions[i - 1]
-                             ? (positions[i + 1] - positions[i - 1]) / 2
-                             : (positions[i - 1] - positions[i + 1]) / 2;
+      this->positions_[joint_idx][i] = positions[joint_idx][i];
+      this->keyframes_[i] = keyframes[i];
+      if (i == 0) {
+        this->speeds_[joint_idx][i] =
+            positions[joint_idx][i + 1] > positions[joint_idx][0]
+                ? (positions[joint_idx][i + 1] - positions[joint_idx][0])
+                : (positions[joint_idx][0] - positions[joint_idx][i + 1]);
+      } else if (i == length - 1) {
+        this->speeds_[joint_idx][i] =
+            positions[joint_idx][i] > positions[joint_idx][i - 1]
+                ? (positions[joint_idx][i] - positions[joint_idx][i - 1])
+                : (positions[joint_idx][i - 1] - positions[joint_idx][i]);
+      } else {
+        this->speeds_[joint_idx][i] =
+            positions[joint_idx][i + 1] > positions[joint_idx][i - 1]
+                ? (positions[joint_idx][i + 1] - positions[joint_idx][i - 1]) /
+                      2
+                : (positions[joint_idx][i - 1] - positions[joint_idx][i + 1]) /
+                      2;
+      }
     }
   }
-  joint_name_ = joint_name;
+
   length_ = length;
   last_play_frame_id_ = 0;  // will start playing from 1
   num_played_ = 0;
   duration_ = keyframes[length_ - 1] - keyframes[0];
-}
-
-void AnimationClip::setWaypoints(unsigned short positions[],
-                                 unsigned short keyframes[],
-                                 unsigned short length) {
-  for (unsigned short i = 0; i < length; i++) {
-    if (length >= ANIM_BUFF_LENGTH) {
-      break;
-    }
-
-    this->positions_[i] = positions[i];
-    this->keyframes_[i] = keyframes[i];
-  }
-  length_ = length;
 }
 
 bool AnimationClip::isPlaying(unsigned short current_frame_id) {
@@ -140,14 +141,15 @@ void AnimationClip::play(unsigned short current_frame_id) {
   last_play_frame_id_ = current_frame_id;
 };
 
-unsigned short AnimationClip::emulate(unsigned short current_frame_id) {
+unsigned short AnimationClip::emulate(unsigned short current_frame_id,
+                                      JointName joint_name) {
   if (this->last_play_frame_id_ > current_frame_id) {
-    return positions_[0];
+    return positions_[(uint8_t)joint_name][0];
   }
 
   unsigned short t = current_frame_id - this->last_play_frame_id_;
   if (t > this->keyframes_[length_ - 1]) {
-    return positions_[this->length_ - 1];
+    return positions_[(uint8_t)joint_name][this->length_ - 1];
   }
 
   for (unsigned short i = 1; i < this->length_; i++) {
@@ -156,28 +158,30 @@ unsigned short AnimationClip::emulate(unsigned short current_frame_id) {
       continue;
     }
 
-    return remap(t, keyframes_[i - 1], keyframes_[i], positions_[i - 1],
-                 positions_[i]);
+    return remap(t, keyframes_[i - 1], keyframes_[i],
+                 positions_[(uint8_t)joint_name][i - 1],
+                 positions_[(uint8_t)joint_name][i]);
   }
 
-  return positions_[0];
+  return positions_[(uint8_t)joint_name][0];
 }
 
 void AnimationClip::emulate_position_and_speed(unsigned short current_frame_id,
+                                               JointName joint_name,
                                                unsigned short& position,
                                                unsigned short& speed) {
   // before initial keyframe
   if (this->last_play_frame_id_ > current_frame_id) {
-    position = positions_[0];
-    speed = speeds_[0];
+    position = positions_[(uint8_t)joint_name][0];
+    speed = speeds_[(uint8_t)joint_name][0];
     return;
   }
 
   unsigned short t = current_frame_id - this->last_play_frame_id_;
   // after last keyframe
   if (t > this->keyframes_[length_ - 1]) {
-    position = positions_[this->length_ - 1];
-    speed = speeds_[this->length_ - 1];
+    position = positions_[(uint8_t)joint_name][this->length_ - 1];
+    speed = speeds_[(uint8_t)joint_name][this->length_ - 1];
     return;
   }
 
@@ -187,10 +191,12 @@ void AnimationClip::emulate_position_and_speed(unsigned short current_frame_id,
       continue;
     }
     // interpolate
-    position = remap(t, keyframes_[i - 1], keyframes_[i], positions_[i - 1],
-                     positions_[i]);
-    speed =
-        remap(t, keyframes_[i - 1], keyframes_[i], speeds_[i - 1], speeds_[i]);
+    position = remap(t, keyframes_[i - 1], keyframes_[i],
+                     positions_[(uint8_t)joint_name][i - 1],
+                     positions_[(uint8_t)joint_name][i]);
+    speed = remap(t, keyframes_[i - 1], keyframes_[i],
+                  speeds_[(uint8_t)joint_name][i - 1],
+                  speeds_[(uint8_t)joint_name][i]);
 
     return;
   }
@@ -274,16 +280,20 @@ void AnimationController::update() {
       continue;
     }
 
-    this->clips_[clip_id].emulate_position_and_speed(step_, pos, speed);
+    for (size_t i = 0; i < NUM_JOINTS; i++) {
+      auto joint_name = this->clips_[clip_id].getJointName(i);
+      this->clips_[clip_id].emulate_position_and_speed(step_, joint_name, pos,
+                                                       speed);
 
-    // speed [pulse/frame] -> [pulse/sec]
-    speed /= fps_;
+      // speed [pulse/frame] -> [pulse/sec]
+      speed /= fps_;
 
-    // pos = this->clips_[clip_id].emulate(step_);
+      // pos = this->clips_[clip_id].emulate(step_);
 
-    // send position to servo
-    this->servo_driver.setTargetPosition(
-        this->joint_servo_map.get(this->clips_[clip_id].getJointName()), pos);
+      // send position to servo
+      this->servo_driver.setTargetPosition(
+          this->joint_servo_map.get(joint_name), pos);
+    }
   }
 }
 }  // namespace botamochi
