@@ -10,7 +10,7 @@
 #include "Animation.hpp"
 #include "AnimationClipExamples.hpp"
 #include "BLEStackchanService.hpp"
-#include "LeonaFace.hpp"
+#include "PaletteExamples.hpp"
 
 #if defined(ARDUINO_M5Stack_ATOM)
 #define RXD 32
@@ -72,28 +72,18 @@ void setup() {
   M5.Lcd.clear();
 
   faces[0] = avatar.getFace();
-  faces[1] = new m5avatar::LeonaFace();
+  faces[1] = new m5avatar::ToonFace1();
   faces[2] = new m5avatar::GirlyFace();
   faces[3] = new m5avatar::OmegaFace();
   faces[4] = new m5avatar::PinkDemonFace();
 
   color_palettes[0] = new m5avatar::ColorPalette();
   color_palettes[1] = new m5avatar::ColorPalette();
+  m5avatar::assignLeonaPalette(color_palettes[1]);
   color_palettes[2] = new m5avatar::ColorPalette();
+  m5avatar::assignUiPalette(color_palettes[2]);
   color_palettes[3] = new m5avatar::ColorPalette();
-  // FBK Palette
-  color_palettes[1]->set(COLOR_PRIMARY,
-                         M5.Lcd.color24to16(0x383838));  // eye
-  color_palettes[1]->set(COLOR_BACKGROUND,
-                         M5.Lcd.color24to16(0xfac2a8));  // skin
-  color_palettes[1]->set(COLOR_SECONDARY,
-                         M5.Lcd.color24to16(0xea9c60));  // cheek
-  // end of FBK Palette
-  color_palettes[2]->set(COLOR_PRIMARY, TFT_DARKGREY);
-  color_palettes[2]->set(COLOR_BACKGROUND, TFT_WHITE);
-  color_palettes[3]->set(COLOR_PRIMARY, TFT_BLACK);
-  color_palettes[3]->set(COLOR_BACKGROUND, TFT_PINK);
-
+  m5avatar::assignFbkPalette(color_palettes[3]);
   avatar.init(8);  // start drawing w/ 8bit color mode
   avatar.setColorPalette(*color_palettes[0]);
 
@@ -234,7 +224,7 @@ void setup() {
            })
       ->startFps(ANIMATION_FPS);
 
-  avatar.setSpeechText("Playing animation");
+  avatar.setSpeechText("");
   anim_controller.play((unsigned short)AnimationName::kNod);
 }
 

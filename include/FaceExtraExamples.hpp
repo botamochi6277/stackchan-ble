@@ -1,6 +1,6 @@
 
-#ifndef LEONA_FACE_HPP
-#define LEONA_FACE_HPP
+#ifndef FACE_ExtraExamples_HPP
+#define FACE_ExtraExamples_HPP
 #include <Eyes.hpp>
 #include <Mouths.hpp>
 #include <faces/FaceTemplates.hpp>
