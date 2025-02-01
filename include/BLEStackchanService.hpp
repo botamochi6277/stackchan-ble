@@ -5,8 +5,8 @@
 
 #include <ArduinoBLE.h>
 #include <Avatar.h>
-#include <STSServoDriver.h>
 
+#include "Animation.hpp"
 #include "BLEFormat.hpp"
 #include "BLEUnit.hpp"
 
@@ -44,13 +44,14 @@ class StackchanService : public BLEService {
       0x01,
       0x00,
       0x00};
-  const uint8_t deg_format_[7] = {BLE_GATT_CPF_FORMAT_UINT8,
-                                  0,
-                                  (uint8_t)BLE_GATT_CPF_UNIT_DEGREE,
-                                  (uint8_t)(BLE_GATT_CPF_UNIT_DEGREE >> 8),
-                                  0x01,
-                                  0x00,
-                                  0x00};
+  const uint8_t servo_pos_format_[7] = {
+      BLE_GATT_CPF_FORMAT_UINT16,
+      0,
+      (uint8_t)BLE_GATT_CPF_UNIT_UNITLESS,
+      (uint8_t)(BLE_GATT_CPF_UNIT_UNITLESS >> 8),
+      0x01,
+      0x00,
+      0x00};
 
   const uint8_t cmd_format_[7] = {BLE_GATT_CPF_FORMAT_UINT8,
                                   0,
@@ -90,14 +91,14 @@ class StackchanService : public BLEService {
 
   // servo
   BLEBooleanCharacteristic is_servo_activated_chr;
-  BLEUnsignedCharCharacteristic servo_pan_angle_chr;
-  BLEUnsignedCharCharacteristic servo_tilt_angle_chr;
+  BLEUnsignedShortCharacteristic servo_pan_angle_chr;
+  BLEUnsignedShortCharacteristic servo_tilt_angle_chr;
 
   StackchanService(/* args */);
   // ~StackchanService();
   void setInitialValues();
 
-  // void servoPoll(stackchan::PanTiltManager &manager);
+  void servoPoll(botamochi::AnimationController &controller);
 
   void facePoll(m5avatar::Avatar &avatar, m5avatar::Face *faces[],
                 uint8_t face_size);
@@ -130,9 +131,9 @@ StackchanService::StackchanService()
       is_servo_activated_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
                              BLERead | BLEWrite),
       servo_pan_angle_chr("671e2001-8cef-46b7-8af3-2eddeb12803e",
-                          BLERead | BLEWrite),
+                          BLERead | BLENotify),
       servo_tilt_angle_chr("671e2002-8cef-46b7-8af3-2eddeb12803e",
-                           BLERead | BLEWrite) {
+                           BLERead | BLENotify) {
   // add characteristics to service
   this->addCharacteristic(this->timer_chr);
   this->addCharacteristic(this->face_chr);
@@ -166,9 +167,9 @@ StackchanService::StackchanService()
 
   BLEDescriptor pwr_descriptor("2901", "is_servo_activated");
   this->is_servo_activated_chr.addDescriptor(pwr_descriptor);
-  BLEDescriptor pan_descriptor("2901", "pan angle [deg]");
+  BLEDescriptor pan_descriptor("2901", "pan angle");
   this->servo_pan_angle_chr.addDescriptor(pan_descriptor);
-  BLEDescriptor tilt_descriptor("2901", "tilt angle [deg]");
+  BLEDescriptor tilt_descriptor("2901", "tilt angle");
   this->servo_tilt_angle_chr.addDescriptor(tilt_descriptor);
 
   // Format Description
@@ -194,9 +195,9 @@ StackchanService::StackchanService()
 
   BLEDescriptor servo_activate_descriptor("2904", this->cmd_format_, 7);
   this->is_servo_activated_chr.addDescriptor(servo_activate_descriptor);
-  BLEDescriptor angle_pan_descriptor01("2904", this->deg_format_, 7);
+  BLEDescriptor angle_pan_descriptor01("2904", this->servo_pos_format_, 7);
   this->servo_pan_angle_chr.addDescriptor(angle_pan_descriptor01);
-  BLEDescriptor angle_tilt_descriptor01("2904", this->deg_format_, 7);
+  BLEDescriptor angle_tilt_descriptor01("2904", this->servo_pos_format_, 7);
   this->servo_tilt_angle_chr.addDescriptor(angle_tilt_descriptor01);
 };
 
@@ -209,6 +210,15 @@ void StackchanService::setInitialValues() {
   this->primary_color_chr.writeValueLE(0xffffff);
   this->background_color_chr.writeValueLE(0x000000);
 };
+
+void StackchanService::servoPoll(botamochi::AnimationController &controller) {
+  unsigned short pos1 = controller.servo_driver.getCurrentPosition(
+      controller.joint_servo_map.get(botamochi::JointName::kHeadPan));
+  this->servo_pan_angle_chr.writeValue(pos1);
+  unsigned short pos2 = controller.servo_driver.getCurrentPosition(
+      controller.joint_servo_map.get(botamochi::JointName::kHeadTilt));
+  this->servo_tilt_angle_chr.writeValue(pos2);
+}
 
 void StackchanService::facePoll(m5avatar::Avatar &avatar,
                                 m5avatar::Face *faces[], uint8_t face_size) {

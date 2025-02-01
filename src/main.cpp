@@ -226,7 +226,12 @@ void setup() {
            })
       ->startFps(30);
 
-  Tasks.add("Animation_Update", [] { anim_controller.update(); })
+  Tasks
+      .add("Animation_Update",
+           [] {
+             anim_controller.update();
+             stackchan_srv.servoPoll(anim_controller);
+           })
       ->startFps(ANIMATION_FPS);
 
   avatar.setSpeechText("Playing animation");
