@@ -2,14 +2,15 @@
 #include <ArduinoBLE.h>
 #include <Avatar.h>
 #include <M5Unified.h>
+#include <STSServoDriver.h>
 #include <TaskManager.h>
 
 #include <faces/FaceTemplates.hpp>
 
 #include "Animation.hpp"
+#include "AnimationClipExamples.hpp"
 #include "BLEStackchanService.hpp"
 #include "LeonaFace.hpp"
-#include "STSServoDriver.h"
 
 #if defined(ARDUINO_M5Stack_ATOM)
 #define RXD 32
@@ -26,46 +27,17 @@
 #define TXD 6
 #endif
 
+using botamochi::AnimationName;
+
 m5avatar::Avatar avatar;
 char balloon_text[20];
 ble::StackchanService stackchan_srv;
 
-// STSServoDriver servo_driver;
 #define ANIMATION_FPS 10
 botamochi::AnimationController anim_controller(ANIMATION_FPS);
 const uint8_t servo_pan_id = 1;
 const uint8_t servo_tilt_id = 2;
 unsigned short anim_clip_id = 0;
-
-unsigned short tmp_key[] = {0, 10, 20, 30};
-botamochi::AnimationClip nob_clip(
-    (botamochi::JointName[]){botamochi::JointName::kHeadPan,
-                             botamochi::JointName::kHeadTilt},
-    (unsigned short[][ANIM_BUFF_LENGTH]){
-        {IDLE_POSITION, IDLE_POSITION, IDLE_POSITION, IDLE_POSITION},  // pan
-        {IDLE_POSITION,
-         IDLE_POSITION + 50,                    // slightly look up
-         IDLE_POSITION - 100, IDLE_POSITION}},  // tilt
-    (unsigned short[]){0, 10, 20, 30}, 4);
-
-// NOTE https://qiita.com/dojyorin/items/4bf068aef2b248f1306e
-botamochi::AnimationClip head_shake_clip(
-    (botamochi::JointName[]){botamochi::JointName::kHeadPan,
-                             botamochi::JointName::kHeadTilt},
-    (unsigned short[][ANIM_BUFF_LENGTH]){
-        {IDLE_POSITION, IDLE_POSITION - 100, IDLE_POSITION + 100,
-         IDLE_POSITION},
-        {IDLE_POSITION, IDLE_POSITION, IDLE_POSITION, IDLE_POSITION}},
-    (unsigned short[]){0, 10, 20, 30}, 4);
-// short max_sweep = 4095;
-// short min_sweep = 0;
-// unsigned short speed = 3400;
-// unsigned char acc = 50;
-
-// uint8_t pan_min = 60;   // deg
-// uint8_t pan_max = 120;  // deg
-// uint8_t tilt_min = 80;
-// uint8_t tilt_max = 100;
 
 float time_sec = 0.0f;
 unsigned long milli_sec = 0U;
@@ -185,8 +157,20 @@ void setup() {
   delay(3000);  // wait for servo to move
 
   // register animation clips
-  anim_controller.setClip(0, nob_clip);
-  anim_controller.setClip(1, head_shake_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kLookFront,
+                          botamochi::look_front_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kLookUp,
+                          botamochi::look_up_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kLookDown,
+                          botamochi::look_down_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kLookLeft,
+                          botamochi::look_left_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kLookRight,
+                          botamochi::look_right_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kNod,
+                          botamochi::nod_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kShake,
+                          botamochi::head_shake_clip);
 
   // sprintf(balloon_text, "servo 01 pos: %d",
   //         anim_controller.servo_driver.getCurrentPosition(1));  // 14338???
@@ -212,7 +196,7 @@ void setup() {
              }
              if (M5.BtnC.wasPressed()) {
                anim_controller.play(anim_clip_id);
-               anim_clip_id = (anim_clip_id + 1) % 2;
+               anim_clip_id = (anim_clip_id + 1) % 7;
              }
            })
       ->startFps(100);
@@ -246,7 +230,7 @@ void setup() {
       ->startFps(ANIMATION_FPS);
 
   avatar.setSpeechText("Playing animation");
-  anim_controller.play(0);
+  anim_controller.play((unsigned short)AnimationName::kNod);
 }
 
 void loop() {
