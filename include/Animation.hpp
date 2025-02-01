@@ -9,7 +9,6 @@
 
 #include <STSServoDriver.h>
 
-#include <initializer_list>
 #include <map>
 
 namespace botamochi {
@@ -65,26 +64,33 @@ class AnimationClip {
   }
 
   bool isPlaying(unsigned short current_frame_id);
-  void play(unsigned short current_frame_id);
-
-  unsigned short emulate(unsigned short current_frame_id, JointName joint_name);
+  void play(unsigned short current_frame_id, bool is_ease_in = false);
 
   void emulate_position_and_speed(unsigned short current_frame_id,
                                   JointName joint_name,
                                   unsigned short& position,
-                                  unsigned short& speed);
+                                  unsigned short& speed,
+                                  unsigned short ease_in_position = -1);
 };
 
-AnimationClip::AnimationClip()
-    : joint_names_({JointName::kHeadPan, JointName::kHeadTilt}),
-      positions_(
-          {{IDLE_POSITION, IDLE_POSITION}, {IDLE_POSITION, IDLE_POSITION}}),
-      speeds_({{IDLE_POSITION, IDLE_POSITION}, {IDLE_POSITION, IDLE_POSITION}}),
-      keyframes_({0, 10}),
-      length_(2),
-      last_play_frame_id_(0) {
-  duration_ = 10;
+AnimationClip::AnimationClip() {
+  // init values
+  joint_names_[0] = JointName::kHeadPan;
+  joint_names_[1] = JointName::kHeadTilt;
+  positions_[0][0] = IDLE_POSITION;
+  positions_[0][1] = IDLE_POSITION;
+  positions_[1][0] = IDLE_POSITION;
+  positions_[1][1] = IDLE_POSITION;
+  speeds_[0][0] = IDLE_POSITION;
+  speeds_[0][1] = IDLE_POSITION;
+  speeds_[1][0] = IDLE_POSITION;
+  speeds_[1][1] = IDLE_POSITION;
+  keyframes_[0] = 0;
+  keyframes_[1] = 10;
+  length_ = 2;
+  last_play_frame_id_ = 0;
   num_played_ = 0;
+  duration_ = 10;
 }
 AnimationClip::AnimationClip(JointName joint_names[],
                              unsigned short positions[][ANIM_BUFF_LENGTH],
@@ -136,44 +142,25 @@ bool AnimationClip::isPlaying(unsigned short current_frame_id) {
           (current_frame_id < last_play_frame_id_ + duration_));
 }
 
-void AnimationClip::play(unsigned short current_frame_id) {
+void AnimationClip::play(unsigned short current_frame_id, bool is_ease_in) {
   num_played_ += 1;
   last_play_frame_id_ = current_frame_id;
 };
 
-unsigned short AnimationClip::emulate(unsigned short current_frame_id,
-                                      JointName joint_name) {
-  if (this->last_play_frame_id_ > current_frame_id) {
-    return positions_[(uint8_t)joint_name][0];
-  }
-
-  unsigned short t = current_frame_id - this->last_play_frame_id_;
-  if (t > this->keyframes_[length_ - 1]) {
-    return positions_[(uint8_t)joint_name][this->length_ - 1];
-  }
-
-  for (unsigned short i = 1; i < this->length_; i++) {
-    // find i meeting (keyframes[i-1]< t < keyframes[i])
-    if (t < keyframes_[i - 1] || keyframes_[i] < t) {
-      continue;
-    }
-
-    return remap(t, keyframes_[i - 1], keyframes_[i],
-                 positions_[(uint8_t)joint_name][i - 1],
-                 positions_[(uint8_t)joint_name][i]);
-  }
-
-  return positions_[(uint8_t)joint_name][0];
-}
-
-void AnimationClip::emulate_position_and_speed(unsigned short current_frame_id,
-                                               JointName joint_name,
-                                               unsigned short& position,
-                                               unsigned short& speed) {
+void AnimationClip::emulate_position_and_speed(
+    unsigned short current_frame_id, JointName joint_name,
+    unsigned short& position, unsigned short& speed,
+    unsigned short ease_in_position) {
+  bool is_ease_in = (ease_in_position != -1);
   // before initial keyframe
   if (this->last_play_frame_id_ > current_frame_id) {
-    position = positions_[(uint8_t)joint_name][0];
-    speed = speeds_[(uint8_t)joint_name][0];
+    if (is_ease_in) {
+      position = ease_in_position;
+    } else {
+      position = positions_[(uint8_t)joint_name][0];
+      speed = speeds_[(uint8_t)joint_name][0];
+    }
+
     return;
   }
 
@@ -190,6 +177,20 @@ void AnimationClip::emulate_position_and_speed(unsigned short current_frame_id,
     if (t < keyframes_[i - 1] || keyframes_[i] < t) {
       continue;
     }
+
+    if (i == 1 && is_ease_in) {
+      // position[0] is replaced by last_emulated_position_
+      position = remap(t, keyframes_[i - 1], keyframes_[i], ease_in_position,
+                       positions_[(uint8_t)joint_name][i]);
+      unsigned short tmp_speed =
+          positions_[(uint8_t)joint_name][i] > ease_in_position
+              ? (positions_[(uint8_t)joint_name][i] - ease_in_position)
+              : (ease_in_position - positions_[(uint8_t)joint_name][i]);
+      speed = remap(t, keyframes_[i - 1], keyframes_[i], tmp_speed,
+                    speeds_[(uint8_t)joint_name][i]);
+      return;
+    }
+
     // interpolate
     position = remap(t, keyframes_[i - 1], keyframes_[i],
                      positions_[(uint8_t)joint_name][i - 1],
@@ -197,7 +198,6 @@ void AnimationClip::emulate_position_and_speed(unsigned short current_frame_id,
     speed = remap(t, keyframes_[i - 1], keyframes_[i],
                   speeds_[(uint8_t)joint_name][i - 1],
                   speeds_[(uint8_t)joint_name][i]);
-
     return;
   }
 }
@@ -245,6 +245,7 @@ class AnimationController {
   unsigned short fps_;
   AnimationClip clips_[MAX_ANIM_CLIP_NUM];
   // current_position
+  unsigned short last_written_positions_[NUM_JOINTS];
   // prev_position
 
  public:
@@ -258,7 +259,8 @@ class AnimationController {
   void play(unsigned short clip_id);
 };
 
-AnimationController::AnimationController(unsigned short fps) : fps_(fps) {}
+AnimationController::AnimationController(unsigned short fps)
+    : fps_(fps), last_written_positions_({IDLE_POSITION, IDLE_POSITION}) {}
 
 AnimationController::~AnimationController() {}
 
@@ -268,7 +270,7 @@ void AnimationController::setClip(unsigned short id, AnimationClip& clip) {
 
 void AnimationController::play(unsigned short clip_id) {
   // play from current frame, set playing frame_id
-  this->clips_[clip_id].play(step_);
+  this->clips_[clip_id].play(step_, true);
 }
 
 void AnimationController::update() {
@@ -282,8 +284,9 @@ void AnimationController::update() {
 
     for (size_t i = 0; i < NUM_JOINTS; i++) {
       auto joint_name = this->clips_[clip_id].getJointName(i);
-      this->clips_[clip_id].emulate_position_and_speed(step_, joint_name, pos,
-                                                       speed);
+      // TODO: try to get position from servo IC
+      this->clips_[clip_id].emulate_position_and_speed(
+          step_, joint_name, pos, speed, last_written_positions_[i]);
 
       // speed [pulse/frame] -> [pulse/sec]
       speed /= fps_;
@@ -293,6 +296,7 @@ void AnimationController::update() {
       // send position to servo
       this->servo_driver.setTargetPosition(
           this->joint_servo_map.get(joint_name), pos);
+      last_written_positions_[i] = pos;
     }
   }
 }
