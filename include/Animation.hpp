@@ -102,6 +102,10 @@ AnimationClip::AnimationClip(JointName joint_names[],
       if (length >= ANIM_BUFF_LENGTH) {
         break;
       }
+      unsigned short keyframe_diff = keyframes[i] - keyframes[i - 1];
+      if (keyframe_diff == 0) {
+        keyframe_diff = 1;
+      }
 
       this->positions_[joint_idx][i] = positions[joint_idx][i];
       this->keyframes_[i] = keyframes[i];
@@ -110,11 +114,13 @@ AnimationClip::AnimationClip(JointName joint_names[],
             positions[joint_idx][i + 1] > positions[joint_idx][0]
                 ? (positions[joint_idx][i + 1] - positions[joint_idx][0])
                 : (positions[joint_idx][0] - positions[joint_idx][i + 1]);
+        this->speeds_[joint_idx][i] /= keyframe_diff;
       } else if (i == length - 1) {
         this->speeds_[joint_idx][i] =
             positions[joint_idx][i] > positions[joint_idx][i - 1]
                 ? (positions[joint_idx][i] - positions[joint_idx][i - 1])
                 : (positions[joint_idx][i - 1] - positions[joint_idx][i]);
+        this->speeds_[joint_idx][i] /= keyframe_diff;
       } else {
         this->speeds_[joint_idx][i] =
             positions[joint_idx][i + 1] > positions[joint_idx][i - 1]
@@ -122,6 +128,7 @@ AnimationClip::AnimationClip(JointName joint_names[],
                       2
                 : (positions[joint_idx][i - 1] - positions[joint_idx][i + 1]) /
                       2;
+        this->speeds_[joint_idx][i] /= keyframe_diff;
       }
     }
   }
