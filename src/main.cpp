@@ -48,9 +48,10 @@ const m5avatar::Expression expressions[] = {
     m5avatar::Expression::kSleepy,  m5avatar::Expression::kDoubt};
 const uint8_t expressions_size = 6;
 m5avatar::Expression current_expression = expressions[0];
+uint8_t expression_idx = 0;
 
-m5avatar::ColorPalette* color_palettes[4];
-const uint8_t color_palettes_size = 4U;
+m5avatar::ColorPalette* color_palettes[5];
+const uint8_t color_palettes_size = 5U;
 uint8_t color_palettes_idx = 0;
 
 m5avatar::Face* faces[5];
@@ -71,19 +72,26 @@ void setup() {
   M5.Lcd.setBrightness(100);
   M5.Lcd.clear();
 
+  // default
   faces[0] = avatar.getFace();
-  faces[1] = new m5avatar::ToonFace1();
-  faces[2] = new m5avatar::GirlyFace();
-  faces[3] = new m5avatar::OmegaFace();
-  faces[4] = new m5avatar::PinkDemonFace();
-
   color_palettes[0] = new m5avatar::ColorPalette();
+  // leona
+  faces[1] = new m5avatar::ToonFace1();
   color_palettes[1] = new m5avatar::ColorPalette();
   m5avatar::assignLeonaPalette(color_palettes[1]);
+  // ui
+  faces[2] = new m5avatar::ToonFace1();
   color_palettes[2] = new m5avatar::ColorPalette();
   m5avatar::assignUiPalette(color_palettes[2]);
+  // fbk
+  faces[3] = new m5avatar::OmegaFace();
   color_palettes[3] = new m5avatar::ColorPalette();
   m5avatar::assignFbkPalette(color_palettes[3]);
+  // pink demon
+  faces[4] = new m5avatar::PinkDemonFace();
+  color_palettes[4] = new m5avatar::ColorPalette();
+  m5avatar::assignPinkDemonPalette(color_palettes[4]);
+
   avatar.init(8);  // start drawing w/ 8bit color mode
   avatar.setColorPalette(*color_palettes[0]);
 
@@ -176,13 +184,13 @@ void setup() {
              if (M5.BtnA.wasPressed()) {
                avatar.setFace(faces[face_idx]);
                face_idx = (face_idx + 1) % faces_length;
-             }
-             if (M5.BtnB.wasPressed()) {
                avatar.setColorPalette(*color_palettes[color_palettes_idx]);
-               // have no effect on written flag
-               // stackchan_srv.facial_color_chr.writeValue(color_palettes_idx);
                color_palettes_idx =
                    (color_palettes_idx + 1) % color_palettes_size;
+             }
+             if (M5.BtnB.wasPressed()) {
+               avatar.setExpression(expressions[expression_idx]);
+               expression_idx = (expression_idx + 1) % expressions_size;
              }
              if (M5.BtnC.wasPressed()) {
                anim_controller.play(anim_clip_id);
@@ -224,7 +232,7 @@ void setup() {
            })
       ->startFps(ANIMATION_FPS);
 
-  avatar.setSpeechText("");
+  avatar.setSpeechText("");  // hide speech balloon
   anim_controller.play((unsigned short)AnimationName::kNod);
 }
 
