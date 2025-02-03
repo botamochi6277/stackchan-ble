@@ -209,7 +209,7 @@ void setup() {
       .add("BLE_polling",
            [] {
              BLE.poll();
-             //  stackchan_srv.servoPoll(pan_tilt_manager);
+              stackchan_srv.animationPoll(anim_controller);
            })
       ->startFps(10);
   Tasks

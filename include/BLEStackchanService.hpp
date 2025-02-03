@@ -83,14 +83,11 @@ class StackchanService : public BLEService {
   BLEUnsignedCharCharacteristic facial_color_chr;
   BLEUnsignedCharCharacteristic mouse_open_ratio_chr;
 
-  BLEUnsignedIntCharacteristic primary_color_chr;
-  // (todo) secondary color
-  BLEUnsignedIntCharacteristic background_color_chr;
-  // (todo) balloon foreground
-  // (todo) balloon background
+  // BLEUnsignedIntCharacteristic primary_color_chr;
+  // BLEUnsignedIntCharacteristic background_color_chr;
 
   // servo
-  BLEBooleanCharacteristic is_servo_activated_chr;
+  BLEUnsignedShortCharacteristic animation_clip_chr;
   BLEUnsignedShortCharacteristic servo_pan_angle_chr;
   BLEUnsignedShortCharacteristic servo_tilt_angle_chr;
 
@@ -99,6 +96,8 @@ class StackchanService : public BLEService {
   void setInitialValues();
 
   void servoPoll(botamochi::AnimationController &controller);
+
+  void animationPoll(botamochi::AnimationController &controller);
 
   void facePoll(m5avatar::Avatar &avatar, m5avatar::Face *faces[],
                 uint8_t face_size);
@@ -124,12 +123,12 @@ StackchanService::StackchanService()
                        BLERead | BLEWrite),
       mouse_open_ratio_chr("671e1003-8cef-46b7-8af3-2eddeb12803e",
                            BLERead | BLEWrite),
-      primary_color_chr("671e1004-8cef-46b7-8af3-2eddeb12803e",
-                        BLERead | BLEWrite),
-      background_color_chr("671e1005-8cef-46b7-8af3-2eddeb12803e",
-                           BLERead | BLEWrite),
-      is_servo_activated_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
-                             BLERead | BLEWrite),
+      // primary_color_chr("671e1004-8cef-46b7-8af3-2eddeb12803e",
+      //                   BLERead | BLEWrite),
+      // background_color_chr("671e1005-8cef-46b7-8af3-2eddeb12803e",
+      //                      BLERead | BLEWrite),
+      animation_clip_chr("671e2000-8cef-46b7-8af3-2eddeb12803e",
+                         BLERead | BLEWrite),
       servo_pan_angle_chr("671e2001-8cef-46b7-8af3-2eddeb12803e",
                           BLERead | BLENotify),
       servo_tilt_angle_chr("671e2002-8cef-46b7-8af3-2eddeb12803e",
@@ -140,9 +139,9 @@ StackchanService::StackchanService()
   this->addCharacteristic(this->facial_expression_chr);
   this->addCharacteristic(this->facial_color_chr);
   this->addCharacteristic(this->mouse_open_ratio_chr);
-  this->addCharacteristic(this->primary_color_chr);
-  this->addCharacteristic(this->background_color_chr);
-  this->addCharacteristic(this->is_servo_activated_chr);
+  // this->addCharacteristic(this->primary_color_chr);
+  // this->addCharacteristic(this->background_color_chr);
+  this->addCharacteristic(this->animation_clip_chr);
   this->addCharacteristic(this->servo_pan_angle_chr);
   this->addCharacteristic(this->servo_tilt_angle_chr);
 
@@ -160,13 +159,13 @@ StackchanService::StackchanService()
   BLEDescriptor mouse_or_descriptor("2901", "mouse open ratio");
   this->mouse_open_ratio_chr.addDescriptor(mouse_or_descriptor);
 
-  BLEDescriptor primary_color_descriptor("2901", "primary color");
-  this->primary_color_chr.addDescriptor(primary_color_descriptor);
-  BLEDescriptor bg_color_descriptor("2901", "background color");
-  this->background_color_chr.addDescriptor(bg_color_descriptor);
+  // BLEDescriptor primary_color_descriptor("2901", "primary color");
+  // this->primary_color_chr.addDescriptor(primary_color_descriptor);
+  // BLEDescriptor bg_color_descriptor("2901", "background color");
+  // this->background_color_chr.addDescriptor(bg_color_descriptor);
 
-  BLEDescriptor pwr_descriptor("2901", "is_servo_activated");
-  this->is_servo_activated_chr.addDescriptor(pwr_descriptor);
+  BLEDescriptor anim_descriptor("2901", "animation clip id");
+  this->animation_clip_chr.addDescriptor(anim_descriptor);
   BLEDescriptor pan_descriptor("2901", "pan angle");
   this->servo_pan_angle_chr.addDescriptor(pan_descriptor);
   BLEDescriptor tilt_descriptor("2901", "tilt angle");
@@ -185,16 +184,16 @@ StackchanService::StackchanService()
   BLEDescriptor facial_color_fmt_descriptor("2904", this->cmd_format_, 7);
   this->facial_color_chr.addDescriptor(facial_color_fmt_descriptor);
 
-  BLEDescriptor primary_color_fmt_descriptor("2904", this->rgb_format_, 7);
-  this->primary_color_chr.addDescriptor(primary_color_fmt_descriptor);
-  BLEDescriptor bg_color_fmt_descriptor("2904", this->rgb_format_, 7);
-  this->background_color_chr.addDescriptor(bg_color_fmt_descriptor);
+  // BLEDescriptor primary_color_fmt_descriptor("2904", this->rgb_format_, 7);
+  // this->primary_color_chr.addDescriptor(primary_color_fmt_descriptor);
+  // BLEDescriptor bg_color_fmt_descriptor("2904", this->rgb_format_, 7);
+  // this->background_color_chr.addDescriptor(bg_color_fmt_descriptor);
 
   BLEDescriptor mouse_open_descriptor("2904", this->cmd_format_, 7);
   this->mouse_open_ratio_chr.addDescriptor(mouse_open_descriptor);
 
-  BLEDescriptor servo_activate_descriptor("2904", this->cmd_format_, 7);
-  this->is_servo_activated_chr.addDescriptor(servo_activate_descriptor);
+  BLEDescriptor anim_id_descriptor("2904", this->cmd_format_, 7);
+  this->animation_clip_chr.addDescriptor(anim_id_descriptor);
   BLEDescriptor angle_pan_descriptor01("2904", this->servo_pos_format_, 7);
   this->servo_pan_angle_chr.addDescriptor(angle_pan_descriptor01);
   BLEDescriptor angle_tilt_descriptor01("2904", this->servo_pos_format_, 7);
@@ -203,12 +202,12 @@ StackchanService::StackchanService()
 
 void StackchanService::setInitialValues() {
   this->timer_chr.writeValue(0U);
-  this->is_servo_activated_chr.writeValue(false);
+  this->animation_clip_chr.writeValue(false);
   this->servo_pan_angle_chr.writeValue(90U);
   this->servo_tilt_angle_chr.writeValue(90U);
 
-  this->primary_color_chr.writeValueLE(0xffffff);
-  this->background_color_chr.writeValueLE(0x000000);
+  // this->primary_color_chr.writeValueLE(0xffffff);
+  // this->background_color_chr.writeValueLE(0x000000);
 };
 
 void StackchanService::servoPoll(botamochi::AnimationController &controller) {
@@ -218,6 +217,14 @@ void StackchanService::servoPoll(botamochi::AnimationController &controller) {
   unsigned short pos2 = controller.servo_driver.getCurrentPosition(
       controller.joint_servo_map.get(botamochi::JointName::kHeadTilt));
   this->servo_tilt_angle_chr.writeValue(pos2);
+}
+
+void StackchanService::animationPoll(
+    botamochi::AnimationController &controller) {
+  if (this->animation_clip_chr.written()) {
+    auto idx = this->animation_clip_chr.value();
+    controller.play(idx);
+  }
 }
 
 void StackchanService::facePoll(m5avatar::Avatar &avatar,
@@ -256,17 +263,17 @@ void StackchanService::facialColorPoll(m5avatar::Avatar &avatar,
     avatar.setColorPalette(*palettes[idx]);
   }
 
-  if (this->primary_color_chr.written() ||
-      this->background_color_chr.written()) {
-    auto idx = this->facial_color_chr.value();
-    // convert 24 bit color to 16bit color
-    palettes[idx]->set(COLOR_PRIMARY,
-                       color::to16bitscolor(this->primary_color_chr.valueLE()));
-    palettes[idx]->set(
-        COLOR_BACKGROUND,
-        color::to16bitscolor(this->background_color_chr.valueLE()));
-    avatar.setColorPalette(*palettes[idx]);
-  }
+  // if (this->primary_color_chr.written() ||
+  //     this->background_color_chr.written()) {
+  //   auto idx = this->facial_color_chr.value();
+  //   // convert 24 bit color to 16bit color
+  //   palettes[idx]->set(COLOR_PRIMARY,
+  //                      color::to16bitscolor(this->primary_color_chr.valueLE()));
+  //   palettes[idx]->set(
+  //       COLOR_BACKGROUND,
+  //       color::to16bitscolor(this->background_color_chr.valueLE()));
+  //   avatar.setColorPalette(*palettes[idx]);
+  // }
 }
 
 void StackchanService::mouseOpenPoll(m5avatar::Avatar &avatar) {
