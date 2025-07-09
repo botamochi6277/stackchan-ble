@@ -25,6 +25,9 @@
 #elif defined(ARDUINO_XIAO_ESP32C3)
 #define RXD 7
 #define TXD 6
+#elif defined(ARDUINO_M5STACK_CORES3)
+#define RXD 1
+#define TXD 2
 #endif
 
 using botamochi::AnimationName;
@@ -82,7 +85,7 @@ void setup() {
   // ui
   faces[2] = new m5avatar::ToonFace1();
   color_palettes[2] = new m5avatar::ColorPalette();
-  m5avatar::assignUiPalette(color_palettes[2]);
+  m5avatar::assignNaorePalette(color_palettes[2]);
   // fbk
   faces[3] = new m5avatar::OmegaFace();
   color_palettes[3] = new m5avatar::ColorPalette();
@@ -209,7 +212,7 @@ void setup() {
       .add("BLE_polling",
            [] {
              BLE.poll();
-              stackchan_srv.animationPoll(anim_controller);
+             stackchan_srv.animationPoll(anim_controller);
            })
       ->startFps(10);
   Tasks

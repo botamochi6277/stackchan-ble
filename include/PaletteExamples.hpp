@@ -59,6 +59,29 @@ void assignLeonaPalette(ColorPalette* palette) {
                M5.Lcd.color24to16(0xF3B5CC));  // cheek #F3B5CC
 }
 
+void assignNaorePalette(ColorPalette* palette) {
+  palette->set(DrawingLocation::kIris1,
+               M5.Lcd.color24to16(0x953346));  // iris 1, #953346
+  palette->set(DrawingLocation::kEyelash, M5.Lcd.color24to16(0x953346));
+  palette->set(DrawingLocation::kEyelid,
+               M5.Lcd.color24to16(0x63436F));  // #63436F
+  palette->set(DrawingLocation::kIrisBackground, TFT_BLACK);
+  palette->set(DrawingLocation::kIris2,
+               M5.Lcd.color24to16(0xd75470));  // iris2,#d75470
+  palette->set(DrawingLocation::kPupil,
+               M5.Lcd.color24to16(0x2D493A));  // #2D493A
+  palette->set(DrawingLocation::kEyeHighlight, TFT_WHITE);
+  palette->set(DrawingLocation::kSkin,
+               M5.Lcd.color24to16(0xF6EDE4));  // skin
+  palette->set(DrawingLocation::kEyeBrow,
+               M5.Lcd.color24to16(0x63434F));  // #63434F
+  palette->set(DrawingLocation::kMouthBackground, M5.Lcd.color24to16(0x63434F));
+  palette->set(DrawingLocation::kInnerMouse,
+               M5.Lcd.color24to16(0x8B0035));  // #8B0035
+  palette->set(DrawingLocation::kCheek1,
+               M5.Lcd.color24to16(0xd77398));  // cheek #d77398
+}
+
 void assignPinkDemonPalette(ColorPalette* palette) {
   palette->set(DrawingLocation::kIris1, M5.Lcd.color24to16(0x000000));
 
