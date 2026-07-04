@@ -2,7 +2,7 @@
 #define PALETTE_EXAMPLES_HPP
 #include <ColorPalette.h>
 
-namespace m5avatar {
+namespace stackchan::display {
 
 void assignUiPalette(ColorPalette* palette) {
   palette->set(DrawingLocation::kIris1,
@@ -20,7 +20,7 @@ void assignUiPalette(ColorPalette* palette) {
                M5.Lcd.color24to16(0xfac2a8));  // skin
   palette->set(DrawingLocation::kEyeBrow, M5.Lcd.color24to16(0x321F39));
   palette->set(DrawingLocation::kMouthBackground, TFT_BLACK);
-  palette->set(DrawingLocation::kInnerMouse, TFT_RED);
+  palette->set(DrawingLocation::kInnerMouth, TFT_RED);
   palette->set(DrawingLocation::kCheek1,
                TFT_PINK);  // cheek
 }
@@ -33,7 +33,7 @@ void assignFbkPalette(ColorPalette* palette) {
   palette->set(DrawingLocation::kCheek1,
                M5.Lcd.color24to16(0xea9c60));  // cheek, #ea9c60
   palette->set(DrawingLocation::kMouthBackground, TFT_BLACK);
-  palette->set(DrawingLocation::kInnerMouse, TFT_RED);
+  palette->set(DrawingLocation::kInnerMouth, TFT_RED);
 }
 
 void assignLeonaPalette(ColorPalette* palette) {
@@ -53,7 +53,7 @@ void assignLeonaPalette(ColorPalette* palette) {
   palette->set(DrawingLocation::kEyeBrow,
                M5.Lcd.color24to16(0x63434F));  // #63434F
   palette->set(DrawingLocation::kMouthBackground, M5.Lcd.color24to16(0x63434F));
-  palette->set(DrawingLocation::kInnerMouse,
+  palette->set(DrawingLocation::kInnerMouth,
                M5.Lcd.color24to16(0x8B0035));  // #8B0035
   palette->set(DrawingLocation::kCheek1,
                M5.Lcd.color24to16(0xF3B5CC));  // cheek #F3B5CC
@@ -76,7 +76,7 @@ void assignNaorePalette(ColorPalette* palette) {
   palette->set(DrawingLocation::kEyeBrow,
                M5.Lcd.color24to16(0x63434F));  // #63434F
   palette->set(DrawingLocation::kMouthBackground, M5.Lcd.color24to16(0x63434F));
-  palette->set(DrawingLocation::kInnerMouse,
+  palette->set(DrawingLocation::kInnerMouth,
                M5.Lcd.color24to16(0x8B0035));  // #8B0035
   palette->set(DrawingLocation::kCheek1,
                M5.Lcd.color24to16(0xd77398));  // cheek #d77398
@@ -95,7 +95,7 @@ void assignPinkDemonPalette(ColorPalette* palette) {
   palette->set(DrawingLocation::kCheek1,
                M5.Lcd.color24to16(0xEB6896));  // cheek, #EB6896
   palette->set(DrawingLocation::kMouthBackground, TFT_BLACK);
-  palette->set(DrawingLocation::kInnerMouse, TFT_RED);
+  palette->set(DrawingLocation::kInnerMouth, TFT_RED);
 }
-}  // namespace m5avatar
+}  // namespace stackchan::display
 #endif  // PALETTE_EXAMPLES_HPP

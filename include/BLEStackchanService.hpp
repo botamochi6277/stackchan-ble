@@ -4,11 +4,16 @@
 #define BLE_STACKCHAN_SERVICE_HPP
 
 #include <ArduinoBLE.h>
-#include <Avatar.h>
 
 #include "Animation.hpp"
 #include "BLEFormat.hpp"
 #include "BLEUnit.hpp"
+
+using stackchan::display::ColorPalette;
+using stackchan::display::Display;
+using stackchan::display::Expression;
+using stackchan::display::ExpressionWeight;
+using stackchan::display::Face;
 
 namespace color {
 u_int16_t to16bitscolor(u_int32_t color) {
@@ -95,22 +100,19 @@ class StackchanService : public BLEService {
   // ~StackchanService();
   void setInitialValues();
 
-  void servoPoll(botamochi::AnimationController &controller);
+  void servoPoll(botamochi::AnimationController& controller);
 
-  void animationPoll(botamochi::AnimationController &controller);
+  void animationPoll(botamochi::AnimationController& controller);
 
-  void facePoll(m5avatar::Avatar &avatar, m5avatar::Face *faces[],
-                uint8_t face_size);
+  void facePoll(Display& display, Face* faces[], uint8_t face_size);
 
-  void facialExpressionPoll(m5avatar::Avatar &avatar,
-                            const m5avatar::Expression expressions[],
+  void facialExpressionPoll(Display& display, const Expression expressions[],
                             uint8_t expression_size);
 
-  void facialColorPoll(m5avatar::Avatar &avatar,
-                       m5avatar::ColorPalette *palettes[],
+  void facialColorPoll(Display& display, ColorPalette* palettes[],
                        uint8_t palette_size);
 
-  void mouseOpenPoll(m5avatar::Avatar &avatar);
+  void mouseOpenPoll(Display& display);
 };
 
 StackchanService::StackchanService()
@@ -210,7 +212,7 @@ void StackchanService::setInitialValues() {
   // this->background_color_chr.writeValueLE(0x000000);
 };
 
-void StackchanService::servoPoll(botamochi::AnimationController &controller) {
+void StackchanService::servoPoll(botamochi::AnimationController& controller) {
   unsigned short pos1 = controller.servo_driver.getCurrentPosition(
       controller.joint_servo_map.get(botamochi::JointName::kHeadPan));
   this->servo_pan_angle_chr.writeValue(pos1);
@@ -220,67 +222,65 @@ void StackchanService::servoPoll(botamochi::AnimationController &controller) {
 }
 
 void StackchanService::animationPoll(
-    botamochi::AnimationController &controller) {
+    botamochi::AnimationController& controller) {
   if (this->animation_clip_chr.written()) {
     auto idx = this->animation_clip_chr.value();
     controller.play(idx);
   }
 }
 
-void StackchanService::facePoll(m5avatar::Avatar &avatar,
-                                m5avatar::Face *faces[], uint8_t face_size) {
+void StackchanService::facePoll(Display& display, Face* faces[],
+                                uint8_t face_size) {
   if (this->face_chr.written()) {
     auto idx = this->face_chr.value();
     if (face_size <= idx) {
       return;
     }
 
-    avatar.setFace(faces[idx]);
+    display.setFace(faces[idx]);
   }
 }
 
-void StackchanService::facialExpressionPoll(
-    m5avatar::Avatar &avatar, const m5avatar::Expression expressions[],
-    uint8_t expression_size) {
-  if (this->facial_expression_chr.written()) {
-    auto idx = this->facial_expression_chr.value();
-    if (expression_size <= idx) {
-      return;
-    }
-
-    avatar.setExpression(expressions[idx]);
+void StackchanService::facialExpressionPoll(Display& display,
+                                            const Expression expressions[],
+                                            uint8_t expression_size) {
+  if (!this->facial_expression_chr.written()) {
+    return;
   }
+
+  auto idx = this->facial_expression_chr.value();
+  if (expression_size <= idx) {
+    return;
+  }
+
+  display.getExpressionWeight().setEmotionalExpression(
+      static_cast<stackchan::display::Expression>(
+          idx % (static_cast<int>(stackchan::display::Expression::kRelax) + 1)),
+      255);
 }
 
-void StackchanService::facialColorPoll(m5avatar::Avatar &avatar,
-                                       m5avatar::ColorPalette *palettes[],
+void StackchanService::facialColorPoll(Display& display,
+                                       ColorPalette* palettes[],
                                        uint8_t palette_size) {
-  if (this->facial_color_chr.written()) {
-    auto idx = this->facial_color_chr.value();
-    if (palette_size <= idx) {
-      return;  // out of index
-    }
-    avatar.setColorPalette(*palettes[idx]);
+  if (!this->facial_color_chr.written()) {
+    return;
   }
 
-  // if (this->primary_color_chr.written() ||
-  //     this->background_color_chr.written()) {
-  //   auto idx = this->facial_color_chr.value();
-  //   // convert 24 bit color to 16bit color
-  //   palettes[idx]->set(COLOR_PRIMARY,
-  //                      color::to16bitscolor(this->primary_color_chr.valueLE()));
-  //   palettes[idx]->set(
-  //       COLOR_BACKGROUND,
-  //       color::to16bitscolor(this->background_color_chr.valueLE()));
-  //   avatar.setColorPalette(*palettes[idx]);
-  // }
+  // processes on characteristic-written
+  auto idx = this->facial_color_chr.value();
+  if (palette_size <= idx) {
+    return;  // out of index
+  }
+  display.setColorPalette(palettes[idx]);
 }
 
-void StackchanService::mouseOpenPoll(m5avatar::Avatar &avatar) {
-  if (this->mouse_open_ratio_chr.written()) {
-    avatar.setMouthOpenRatio(
-        static_cast<float>(this->mouse_open_ratio_chr.value()) / 255U);
+void StackchanService::mouseOpenPoll(Display& display) {
+  if (!this->mouse_open_ratio_chr.written()) {
+    return;
   }
+
+  display.getExpressionWeight().set(Expression::kAa,
+                                    this->mouse_open_ratio_chr.value());
 }
 
 }  // namespace ble
