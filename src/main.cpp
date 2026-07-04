@@ -4,7 +4,7 @@
 #include <STSServoDriver.h>
 #include <TaskManager.h>
 
-// display
+// stackchan display
 #include <ColorPalette.h>
 #include <Display.h>
 #include <Expression.h>
@@ -110,8 +110,22 @@ void setup() {
   // Serial2.begin(1000000, SERIAL_8N1, RXD, TXD);  // for servo driver
   delay(1000);  // waiting for connection
 
-  M5.Lcd.setBrightness(100);
+  M5.Lcd.setBrightness(150);
   M5.Lcd.clear();
+
+  M5.Display.drawString("Smart", 10, 10, 4);
+  delay(200);
+  M5.Display.drawString("Tech", 10, 50, 4);
+  delay(200);
+  M5.Display.drawString("Animating", 10, 90, 4);
+  delay(200);
+  M5.Display.drawString("Creative", 10, 130, 4);
+  delay(200);
+  M5.Display.drawString("Kit", 10, 170, 4);
+  delay(200);
+  M5.Display.drawString("CHANt", 10, 210, 4);
+
+  delay(10000);
 
   // default
   faces[0] = display.getFace();
@@ -135,21 +149,23 @@ void setup() {
 
   display.getCanvas().setColorDepth(8);  // start drawing w/ 8bit color mode
   display.setColorPalette(color_palettes[0]);
-  display.getFace()->autoScale();
+  display.setFace(faces[0]);
+  // display.getFace()->autoScale();
 
   if (!BLE.begin()) {
     // "starting BLE failed!"
     display.getSpeechBalloon().setText("BLE is unavailable");
+    display.update();
     M5_LOGW("BLE is unavailable");
   } else {
     M5_LOGD("BLE is available");
   }
 
-  // if (!Serial2) {
-  //   display.getSpeechBalloon().setText("Serial2 is not connected");
-  // } else {
-  //   M5_LOGD("Serial2 is connected");
-  // }
+  if (!Serial2) {
+    display.getSpeechBalloon().setText("Serial2 is not connected");
+  } else {
+    M5_LOGD("Serial2 is connected");
+  }
 
   // ## beginning Bluetooth setup
   String ble_address = BLE.address();
@@ -164,13 +180,14 @@ void setup() {
   // start advertising
   BLE.advertise();
 
-  // ## Servo setting
+  // // ## Servo setting
   auto is_connected = anim_controller.servo_driver.init(&Serial2);
   if (!is_connected) {
     display.getSpeechBalloon().setText("servo is not connected");
   } else {
     display.getSpeechBalloon().setText("servo is connected");
   }
+  display.update();
 
   anim_controller.joint_servo_map.set(botamochi::JointName::kHeadPan,
                                       servo_pan_id);
@@ -187,14 +204,17 @@ void setup() {
   display.getSpeechBalloon().setText("moving to 400");
   anim_controller.servo_driver.setTargetPosition(servo_pan_id, 400);
   anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 400);
+  display.update();
   delay(3000);  // wait for servo to move
   display.getSpeechBalloon().setText("moving to 601");
   anim_controller.servo_driver.setTargetPosition(servo_pan_id, 601);
   anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 601);
+  display.update();
   delay(3000);  // wait for servo to move
   display.getSpeechBalloon().setText("moving to 511");
   anim_controller.servo_driver.setTargetPosition(servo_pan_id, IDLE_POSITION);
   anim_controller.servo_driver.setTargetPosition(servo_tilt_id, IDLE_POSITION);
+  display.update();
   delay(3000);  // wait for servo to move
 
   // register animation clips
@@ -220,43 +240,43 @@ void setup() {
   M5_LOGI("setting tasks...");
   // ## register tasks
   Tasks.setAutoErase(true);
-  Tasks
-      .add("M5_update",
-           [] {
-             M5.update();
-             if (M5.BtnA.wasPressed()) {
-               display.setFace(faces[face_idx]);
-               face_idx = (face_idx + 1) % faces_length;
-               display.setColorPalette(color_palettes[color_palettes_idx]);
-               color_palettes_idx =
-                   (color_palettes_idx + 1) % color_palettes_size;
-             }
-             if (M5.BtnB.wasPressed()) {
-               display.getExpressionWeight().set(expressions[expression_idx],
-                                                 255);
-               expression_idx = (expression_idx + 1) % expressions_size;
-             }
-             if (M5.BtnC.wasPressed()) {
-               anim_controller.play(anim_clip_id);
-               anim_clip_id = (anim_clip_id + 1) % 7;
-             }
+  // Tasks
+  // .add("M5_update",
+  //      [] {
+  //        //  M5.update();
+  //        //  if (M5.BtnA.wasPressed()) {
+  //        //    display.setFace(faces[face_idx]);
+  //        //    face_idx = (face_idx + 1) % faces_length;
+  //        //    display.setColorPalette(color_palettes[color_palettes_idx]);
+  //        //    color_palettes_idx =
+  //        //        (color_palettes_idx + 1) % color_palettes_size;
+  //        //  }
+  //        //  if (M5.BtnB.wasPressed()) {
+  //        //    display.getExpressionWeight().set(expressions[expression_idx],
+  //        //                                      255);
+  //        //    expression_idx = (expression_idx + 1) % expressions_size;
+  //        //  }
+  //        //  if (M5.BtnC.wasPressed()) {
+  //        //    anim_controller.play(anim_clip_id);
+  //        //    anim_clip_id = (anim_clip_id + 1) % 7;
+  //        //  }
 
-             if (m5_count % (100 * 60) == 0) {
-               auto i = random(7);
-               anim_controller.play(i);
-             }
+  //        //  if (m5_count % (100 * 60) == 0) {
+  //        //    auto i = random(7);
+  //        //    anim_controller.play(i);
+  //        //  }
 
-             // random motion
-             m5_count += 1;
-           })
-      ->startFps(100);
-  Tasks
-      .add("Clock",
-           [] {
-             milli_sec = millis();
-             stackchan_srv.timer_chr.writeValue(milli_sec);
-           })
-      ->startFps(60);
+  //        // random motion
+  //        m5_count += 1;
+  //      })
+  // ->startFps(100);
+  // Tasks
+  //     .add("Clock",
+  //          [] {
+  //            milli_sec = millis();
+  //            stackchan_srv.timer_chr.writeValue(milli_sec);
+  //          })
+  //     ->startFps(60);
   Tasks
       .add("BLE_polling",
            [] {
@@ -267,12 +287,13 @@ void setup() {
   Tasks
       .add("Facial_Update",
            [] {
-             stackchan_srv.facePoll(display, faces, faces_length);
-             stackchan_srv.facialExpressionPoll(display, expressions,
-                                                expressions_size);
-             stackchan_srv.facialColorPoll(display, color_palettes,
-                                           color_palettes_size);
-             stackchan_srv.mouseOpenPoll(display);
+             M5.update();
+             //  stackchan_srv.facePoll(display, faces, faces_length);
+             //  stackchan_srv.facialExpressionPoll(display, expressions,
+             //                                     expressions_size);
+             //  stackchan_srv.facialColorPoll(display, color_palettes,
+             //                                color_palettes_size);
+             //  stackchan_srv.mouseOpenPoll(display);
              display.update();
              //  M5_LOGI("Face updated");
            })
@@ -293,10 +314,5 @@ void setup() {
 void loop() {
   Tasks.update();  // automatically execute tasks
 
-  // if (main_count % 30 == 0) {
-  //   display.update();
-  //   M5_LOGD("Face updated");
-  // }
-  // main_count++;
   delay(1);
 }
