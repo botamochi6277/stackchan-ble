@@ -3,15 +3,15 @@
 #define BOTAMOCHI_ANIMATION_HPP
 
 #define ANIM_BUFF_LENGTH 8
-#define IDLE_POSITION 511
+#define IDLE_POSITION 0
 #define MAX_ANIM_CLIP_NUM 8
 #define NUM_JOINTS 2
 
-#include <STSServoDriver.h>
+#include <M5StackChan.h>
 
 #include <map>
 
-namespace botamochi {
+namespace stackchan::motion {
 
 template <typename T>
 T remap(T x, T in_min, T in_max, T out_min, T out_max, bool clip = false) {
@@ -28,8 +28,8 @@ T remap(T x, T in_min, T in_max, T out_min, T out_max, bool clip = false) {
 }
 
 enum class JointName : unsigned char {
-  kHeadPan = 0,
-  kHeadTilt,
+  kHeadPan = 0,  // Yaw
+  kHeadTilt,     // Pitch
 };
 
 enum class AnimationName : unsigned char {
@@ -45,8 +45,8 @@ enum class AnimationName : unsigned char {
 class AnimationClip {
  private:
   JointName joint_names_[NUM_JOINTS];
-  unsigned short positions_[NUM_JOINTS][ANIM_BUFF_LENGTH];
-  unsigned short speeds_[NUM_JOINTS][ANIM_BUFF_LENGTH];
+  int16_t positions_[NUM_JOINTS][ANIM_BUFF_LENGTH];
+  int16_t speeds_[NUM_JOINTS][ANIM_BUFF_LENGTH];
   unsigned short keyframes_[ANIM_BUFF_LENGTH];
   unsigned short length_;    // num values of the clip
   unsigned short duration_;  // in frames
@@ -55,8 +55,7 @@ class AnimationClip {
 
  public:
   AnimationClip();
-  AnimationClip(JointName joint_names[],
-                unsigned short positions[][ANIM_BUFF_LENGTH],
+  AnimationClip(JointName joint_names[], int16_t positions[][ANIM_BUFF_LENGTH],
                 unsigned short keyframes[], unsigned short length);
   ~AnimationClip();
   inline JointName getJointName(unsigned short idx) {
@@ -67,10 +66,9 @@ class AnimationClip {
   void play(unsigned short current_frame_id, bool is_ease_in = false);
 
   void emulate_position_and_speed(unsigned short current_frame_id,
-                                  JointName joint_name,
-                                  unsigned short& position,
-                                  unsigned short& speed,
-                                  unsigned short ease_in_position = -1);
+                                  JointName joint_name, int16_t& position,
+                                  int16_t& speed,
+                                  int16_t ease_in_position = -1);
 };
 
 AnimationClip::AnimationClip() {
@@ -93,7 +91,7 @@ AnimationClip::AnimationClip() {
   duration_ = 10;
 }
 AnimationClip::AnimationClip(JointName joint_names[],
-                             unsigned short positions[][ANIM_BUFF_LENGTH],
+                             int16_t positions[][ANIM_BUFF_LENGTH],
                              unsigned short keyframes[],
                              unsigned short length) {
   for (size_t joint_idx = 0; joint_idx < NUM_JOINTS; joint_idx++) {
@@ -154,10 +152,11 @@ void AnimationClip::play(unsigned short current_frame_id, bool is_ease_in) {
   last_play_frame_id_ = current_frame_id;
 };
 
-void AnimationClip::emulate_position_and_speed(
-    unsigned short current_frame_id, JointName joint_name,
-    unsigned short& position, unsigned short& speed,
-    unsigned short ease_in_position) {
+void AnimationClip::emulate_position_and_speed(unsigned short current_frame_id,
+                                               JointName joint_name,
+                                               int16_t& position,
+                                               int16_t& speed,
+                                               int16_t ease_in_position) {
   bool is_ease_in = (ease_in_position != -1);
   // before initial keyframe
   if (this->last_play_frame_id_ > current_frame_id) {
@@ -187,23 +186,26 @@ void AnimationClip::emulate_position_and_speed(
 
     if (i == 1 && is_ease_in) {
       // position[0] is replaced by last_emulated_position_
-      position = remap(t, keyframes_[i - 1], keyframes_[i], ease_in_position,
-                       positions_[(uint8_t)joint_name][i]);
-      unsigned short tmp_speed =
+      position =
+          remap((int16_t)t, (int16_t)keyframes_[i - 1], (int16_t)keyframes_[i],
+                ease_in_position, positions_[(uint8_t)joint_name][i]);
+      int16_t tmp_speed =
           positions_[(uint8_t)joint_name][i] > ease_in_position
               ? (positions_[(uint8_t)joint_name][i] - ease_in_position)
               : (ease_in_position - positions_[(uint8_t)joint_name][i]);
-      speed = remap(t, keyframes_[i - 1], keyframes_[i], tmp_speed,
-                    speeds_[(uint8_t)joint_name][i]);
+      speed =
+          remap((int16_t)t, (int16_t)keyframes_[i - 1], (int16_t)keyframes_[i],
+                tmp_speed, speeds_[(uint8_t)joint_name][i]);
       return;
     }
 
     // interpolate
-    position = remap(t, keyframes_[i - 1], keyframes_[i],
-                     positions_[(uint8_t)joint_name][i - 1],
-                     positions_[(uint8_t)joint_name][i]);
-    speed = remap(t, keyframes_[i - 1], keyframes_[i],
-                  speeds_[(uint8_t)joint_name][i - 1],
+    position =
+        remap((int16_t)t, (int16_t)keyframes_[i - 1], (int16_t)keyframes_[i],
+              positions_[(uint8_t)joint_name][i - 1],
+              positions_[(uint8_t)joint_name][i]);
+    speed = remap((int16_t)t, (int16_t)keyframes_[i - 1],
+                  (int16_t)keyframes_[i], speeds_[(uint8_t)joint_name][i - 1],
                   speeds_[(uint8_t)joint_name][i]);
     return;
   }
@@ -256,7 +258,7 @@ class AnimationController {
   // prev_position
 
  public:
-  STSServoDriver servo_driver;
+  // STSServoDriver servo_driver;
   JointServoMap joint_servo_map;
 
   AnimationController(unsigned short fps);
@@ -284,8 +286,8 @@ void AnimationController::play(unsigned short clip_id) {
 
 void AnimationController::update() {
   step_ += 1;  // start from 1
-  unsigned short pos;
-  unsigned short speed;
+  int16_t pos;
+  int16_t speed;
   for (unsigned short clip_id = 0; clip_id < MAX_ANIM_CLIP_NUM; clip_id++) {
     if (!this->clips_[clip_id].isPlaying(step_)) {
       continue;
@@ -303,11 +305,20 @@ void AnimationController::update() {
       // pos = this->clips_[clip_id].emulate(step_);
 
       // send position to servo
-      this->servo_driver.setTargetPosition(
-          this->joint_servo_map.get(joint_name), pos);
+      // this->servo_driver.setTargetPosition(
+      //     this->joint_servo_map.get(joint_name), pos);
+
+      if (joint_name == JointName::kHeadPan) {
+        M5StackChan.Motion.moveYaw(pos, speed);
+      }
+
+      if (joint_name == JointName::kHeadTilt) {
+        M5StackChan.Motion.movePitch(pos, speed);
+      }
+
       last_written_positions_[i] = pos;
     }
   }
 }
-}  // namespace botamochi
+}  // namespace stackchan::motion
 #endif

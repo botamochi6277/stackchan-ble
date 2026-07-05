@@ -1,7 +1,6 @@
 
 #include <ArduinoBLE.h>
 #include <M5Unified.h>
-#include <STSServoDriver.h>
 #include <TaskManager.h>
 
 // stackchan display
@@ -38,15 +37,14 @@
 #define TXD 2
 #endif
 
-using botamochi::AnimationName;
+using stackchan::motion::AnimationName;
 
 Display display;
 char balloon_text[20];
 // ble::StackchanService stackchan_srv;
 
 #define ANIMATION_FPS 10
-botamochi::AnimationController anim_controller(ANIMATION_FPS);
-bool is_servo_connected = false;
+stackchan::motion::AnimationController anim_controller(ANIMATION_FPS);
 const uint8_t servo_pan_id = 1;
 const uint8_t servo_tilt_id = 2;
 unsigned short anim_clip_id = 0;
@@ -98,14 +96,13 @@ void changeFace(int8_t delta);
 void changeExpression(int8_t delta);
 
 void setup() {
-  auto cfg = M5.config();  // default config?
-
   // please uncomment if you supply power from GROVE connector to the CORES3
   // #ifdef ARDUINO_M5STACK_CORES3
   //   cfg.output_power = false;
   // #endif
 
-  M5.begin(cfg);
+  M5StackChan.begin();
+
   M5.Log.setLogLevel(m5::log_target_serial, ESP_LOG_VERBOSE);
   // Serial.begin(115200);
   Serial2.begin(1000000, SERIAL_8N1, RXD, TXD);  // for servo driver
@@ -203,53 +200,23 @@ void setup() {
   // delay(1000);  // wait for servo to move
 
   // initial move
-  // if (is_servo_connected) {
-  //   anim_controller.joint_servo_map.set(botamochi::JointName::kHeadPan,
-  //                                       servo_pan_id);
-  //   anim_controller.joint_servo_map.set(botamochi::JointName::kHeadTilt,
-  //                                       servo_tilt_id);
-  //   display.getSpeechBalloon().setText("Scaning servos...");
-  //   for (size_t i = 1; i < 3; i++) {
-  //     bool b = anim_controller.servo_driver.ping(i);
-  //     anim_controller.servo_driver.getCurrentPosition(
-  //         i);  // execute determineServoType
-  //   }
-  //   display.getSpeechBalloon().setText("moving to 400");
-  //   anim_controller.servo_driver.setTargetPosition(servo_pan_id, 400);
-  //   anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 400);
-  //   display.update();
-  //   delay(3000);  // wait for servo to move
+  M5StackChan.Motion.goHome(500);
 
-  //   display.getSpeechBalloon().setText("moving to 601");
-  //   anim_controller.servo_driver.setTargetPosition(servo_pan_id, 601);
-  //   anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 601);
-  //   display.update();
-  //   delay(3000);  // wait for servo to move
-
-  //   display.getSpeechBalloon().setText("moving to 511");
-  //   anim_controller.servo_driver.setTargetPosition(servo_pan_id,
-  //   IDLE_POSITION);
-  //   anim_controller.servo_driver.setTargetPosition(servo_tilt_id,
-  //                                                  IDLE_POSITION);
-  //   display.update();
-  //   delay(3000);  // wait for servo to move
-  // }
-
-  // // register animation clips
-  // anim_controller.setClip((unsigned short)AnimationName::kLookFront,
-  //                         botamochi::look_front_clip);
-  // anim_controller.setClip((unsigned short)AnimationName::kLookUp,
-  //                         botamochi::look_up_clip);
-  // anim_controller.setClip((unsigned short)AnimationName::kLookDown,
-  //                         botamochi::look_down_clip);
-  // anim_controller.setClip((unsigned short)AnimationName::kLookLeft,
-  //                         botamochi::look_left_clip);
-  // anim_controller.setClip((unsigned short)AnimationName::kLookRight,
-  //                         botamochi::look_right_clip);
-  // anim_controller.setClip((unsigned short)AnimationName::kNod,
-  //                         botamochi::nod_clip);
-  // anim_controller.setClip((unsigned short)AnimationName::kShake,
-  //                         botamochi::head_shake_clip);
+  // register animation clips
+  anim_controller.setClip((unsigned short)AnimationName::kLookFront,
+                          stackchan::motion::look_front_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kLookUp,
+                          stackchan::motion::look_up_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kLookDown,
+                          stackchan::motion::look_down_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kLookLeft,
+                          stackchan::motion::look_left_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kLookRight,
+                          stackchan::motion::look_right_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kNod,
+                          stackchan::motion::nod_clip);
+  anim_controller.setClip((unsigned short)AnimationName::kShake,
+                          stackchan::motion::head_shake_clip);
 
   // sprintf(balloon_text, "servo 01 pos: %d",
   //         anim_controller.servo_driver.getCurrentPosition(1));  // 14338???
@@ -261,7 +228,7 @@ void setup() {
   Tasks
       .add("M5_update",
            [] {
-             M5.update();
+             M5StackChan.update();
              if (M5.BtnA.wasPressed()) {
                changeFace(1);
              }
@@ -324,7 +291,8 @@ void setup() {
   Tasks
       .add("Facial_Update",
            [] {
-             //  stackchan_srv.facePoll(display, faces, NUM_FACES);
+             //  M5.update();
+             //  stackchan_srv.facePoll(display, faces, faces_length);
              //  stackchan_srv.facialExpressionPoll(display, expressions,
              //                                     expressions_size);
              //  stackchan_srv.facialColorPoll(display, color_palettes,

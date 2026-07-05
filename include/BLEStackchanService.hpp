@@ -100,9 +100,9 @@ class StackchanService : public BLEService {
   // ~StackchanService();
   void setInitialValues();
 
-  void servoPoll(botamochi::AnimationController& controller);
+  void servoPoll(stackchan::motion::AnimationController& controller);
 
-  void animationPoll(botamochi::AnimationController& controller);
+  void animationPoll(stackchan::motion::AnimationController& controller);
 
   void facePoll(Display& display, Face* faces[], uint8_t face_size);
 
@@ -212,21 +212,22 @@ void StackchanService::setInitialValues() {
   // this->background_color_chr.writeValueLE(0x000000);
 };
 
-void StackchanService::servoPoll(botamochi::AnimationController& controller) {
-  unsigned short pos1 = controller.servo_driver.getCurrentPosition(
-      controller.joint_servo_map.get(botamochi::JointName::kHeadPan));
-  this->servo_pan_angle_chr.writeValue(pos1);
-  unsigned short pos2 = controller.servo_driver.getCurrentPosition(
-      controller.joint_servo_map.get(botamochi::JointName::kHeadTilt));
-  this->servo_tilt_angle_chr.writeValue(pos2);
+void StackchanService::servoPoll(
+    stackchan::motion::AnimationController& controller) {
+  // unsigned short pos1 = controller.servo_driver.getCurrentPosition(
+  //     controller.joint_servo_map.get(stackchan::motion::JointName::kHeadPan));
+  // this->servo_pan_angle_chr.writeValue(pos1);
+  // unsigned short pos2 = controller.servo_driver.getCurrentPosition(
+  //     controller.joint_servo_map.get(stackchan::motion::JointName::kHeadTilt));
+  // this->servo_tilt_angle_chr.writeValue(pos2);
 }
 
 void StackchanService::animationPoll(
-    botamochi::AnimationController& controller) {
-  if (this->animation_clip_chr.written()) {
-    auto idx = this->animation_clip_chr.value();
-    controller.play(idx);
-  }
+    stackchan::motion::AnimationController& controller) {
+  // if (this->animation_clip_chr.written()) {
+  //   auto idx = this->animation_clip_chr.value();
+  //   controller.play(idx);
+  // }
 }
 
 void StackchanService::facePoll(Display& display, Face* faces[],

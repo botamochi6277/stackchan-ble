@@ -3,7 +3,7 @@
 [![PlatformIO Build](https://github.com/botamochi6277/stackchan-ble/actions/workflows/ci-platformio.yml/badge.svg?branch=main)](https://github.com/botamochi6277/stackchan-ble/actions/workflows/ci-platformio.yml)
 
 *Stackchan-BLE* is root controller for Super kawaii stackchan controlled with BLE.
-*m5avatar* is a library to control facial expression.
+*stackchan-display* is a library to control facial expression.
 *pan tilt servos* is a sub library of this repository to control servo motions and animations.
 
 ```mermaid
@@ -11,11 +11,11 @@ graph LR
 
 subgraph m5stack
 
-  m5avatar
+  stackchan-display
   stackchan_ble
   pan_tilt_servos
 
-  stackchan_ble---m5avatar
+  stackchan_ble---stackchan-display
   stackchan_ble---pan_tilt_servos
 end
 
