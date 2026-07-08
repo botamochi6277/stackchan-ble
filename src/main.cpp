@@ -30,24 +30,23 @@
 #elif defined(ARDUINO_XIAO_ESP32C3)
 #define RXD 7
 #define TXD 6
-#elif defined(ARDUINO_M5STACK_CORES3)
-// #define RXD 1
-// #define TXD 2
-// TODO: Add Stackchan Body
-
+#elif defined(STACKCHAN_BODY)
 #define RXD 7
 #define TXD 6
-
+#elif defined(ARDUINO_M5STACK_CORES3)
+#define RXD 1
+#define TXD 2
 #endif
 
 using botamochi::AnimationName;
 
 Display display;
 char balloon_text[20];
-ble::StackchanService stackchan_srv;
+// ble::StackchanService stackchan_srv;
 
 #define ANIMATION_FPS 10
 botamochi::AnimationController anim_controller(ANIMATION_FPS);
+bool is_servo_connected = false;
 const uint8_t servo_pan_id = 1;
 const uint8_t servo_tilt_id = 2;
 unsigned short anim_clip_id = 0;
@@ -64,13 +63,11 @@ const uint8_t expressions_size = 6;
 Expression current_expression = expressions[0];
 uint8_t expression_idx = 0;
 
-ColorPalette* color_palettes[5];
-const uint8_t color_palettes_size = 5U;
-uint8_t color_palettes_idx = 0;
-
-Face* faces[4];
-const uint8_t faces_length = sizeof(faces) / sizeof(Face*);
+const uint8_t NUM_FACES = 4;
+Face* faces[NUM_FACES];
 uint8_t face_idx = 0;
+
+ColorPalette* color_palettes[NUM_FACES];
 
 void assignMiaPalette(ColorPalette* palette) {
   using stackchan::display::DrawingLocation;
@@ -96,6 +93,10 @@ void assignMiaPalette(ColorPalette* palette) {
                M5.Lcd.color24to16(0xd77398));  // cheek #d77398
 }
 
+void registerFaces();
+void changeFace(int8_t delta);
+void changeExpression(int8_t delta);
+
 void setup() {
   auto cfg = M5.config();  // default config?
 
@@ -107,31 +108,33 @@ void setup() {
   M5.begin(cfg);
   M5.Log.setLogLevel(m5::log_target_serial, ESP_LOG_VERBOSE);
   // Serial.begin(115200);
-  // Serial2.begin(1000000, SERIAL_8N1, RXD, TXD);  // for servo driver
-  delay(1000);  // waiting for connection
+  Serial2.begin(1000000, SERIAL_8N1, RXD, TXD);  // for servo driver
+  delay(1000);                                   // waiting for connection
+
+  // UART_NUM_1
 
   M5.Lcd.setBrightness(150);
   M5.Lcd.clear();
 
-  M5.Display.drawString("Smart", 10, 10, 4);
+  M5.Display.drawString("Smart", 10, 10, &fonts::Font4);
   delay(200);
-  M5.Display.drawString("Tech", 10, 50, 4);
+  M5.Display.drawString("Tech", 10, 50, &fonts::Font4);
   delay(200);
-  M5.Display.drawString("Animating", 10, 90, 4);
+  M5.Display.drawString("Animating", 10, 90, &fonts::Font4);
   delay(200);
-  M5.Display.drawString("Creative", 10, 130, 4);
+  M5.Display.drawString("Creative", 10, 130, &fonts::Font4);
   delay(200);
-  M5.Display.drawString("Kit", 10, 170, 4);
+  M5.Display.drawString("Kit", 10, 170, &fonts::Font4);
   delay(200);
-  M5.Display.drawString("CHANt", 10, 210, 4);
+  M5.Display.drawString("CHANt", 10, 210, &fonts::Font4);
 
-  delay(10000);
+  delay(3000);
 
   // default
   faces[0] = display.getFace();
   color_palettes[0] = new ColorPalette();
   // leona
-  faces[1] = new stackchan::display::ToonFace1();
+  faces[1] = new stackchan::display::ToonFace2();
   color_palettes[1] = new ColorPalette();
   assignLeonaPalette(color_palettes[1]);
   // ui
@@ -141,7 +144,7 @@ void setup() {
   // fbk
   faces[3] = new stackchan::display::OmegaFace();
   color_palettes[3] = new ColorPalette();
-  assignFbkPalette(color_palettes[3]);
+  // assignFbkPalette(color_palettes[3]);
   // pink demon
   // faces[4] = new PinkDemonFace();
   // color_palettes[4] = new ColorPalette();
@@ -152,86 +155,101 @@ void setup() {
   display.setFace(faces[0]);
   // display.getFace()->autoScale();
 
-  if (!BLE.begin()) {
-    // "starting BLE failed!"
-    display.getSpeechBalloon().setText("BLE is unavailable");
-    display.update();
-    M5_LOGW("BLE is unavailable");
-  } else {
-    M5_LOGD("BLE is available");
-  }
+  // if (!BLE.begin()) {
+  //   // "starting BLE failed!"
+  //   display.getSpeechBalloon().setText("BLE is unavailable");
+  //   display.update();
+  //   M5_LOGW("BLE is unavailable");
+  // } else {
+  //   M5_LOGD("BLE is available");
+  // }
 
-  if (!Serial2) {
-    display.getSpeechBalloon().setText("Serial2 is not connected");
-  } else {
-    M5_LOGD("Serial2 is connected");
-  }
+  // if (!Serial2) {
+  //   display.getSpeechBalloon().setText("Serial2 is not connected");
+  //   M5_LOGW("Serial2 is not connected");
+  // } else {
+  //   M5_LOGD("Serial2 is connected");
+  // }
 
-  // ## beginning Bluetooth setup
-  String ble_address = BLE.address();
-  String local_name = "Stackchan_" + ble_address;
-  BLE.setDeviceName(local_name.c_str());
-  BLE.setLocalName("Stackchan");
-  BLE.setAdvertisedService(stackchan_srv);
+  // display.update();
 
-  // add service
-  BLE.addService(stackchan_srv);
-  stackchan_srv.setInitialValues();
-  // start advertising
-  BLE.advertise();
+  // // ## beginning Bluetooth setup
+  // String ble_address = BLE.address();
+  // String local_name = "Stackchan_" + ble_address;
+  // BLE.setDeviceName(local_name.c_str());
+  // BLE.setLocalName("Stackchan");
+  // BLE.setAdvertisedService(stackchan_srv);
 
-  // // ## Servo setting
-  auto is_connected = anim_controller.servo_driver.init(&Serial2);
-  if (!is_connected) {
-    display.getSpeechBalloon().setText("servo is not connected");
-  } else {
-    display.getSpeechBalloon().setText("servo is connected");
-  }
-  display.update();
+  // // add service
+  // BLE.addService(stackchan_srv);
+  // stackchan_srv.setInitialValues();
+  // // start advertising
+  // BLE.advertise();
 
-  anim_controller.joint_servo_map.set(botamochi::JointName::kHeadPan,
-                                      servo_pan_id);
-  anim_controller.joint_servo_map.set(botamochi::JointName::kHeadTilt,
-                                      servo_tilt_id);
-  display.getSpeechBalloon().setText("Scaning servos...");
-  for (size_t i = 1; i < 3; i++) {
-    bool b = anim_controller.servo_driver.ping(i);
-    anim_controller.servo_driver.getCurrentPosition(
-        i);  // execute determineServoType
-  }
+  // ## Servo setting
+  // is_servo_connected = anim_controller.servo_driver.init(&Serial2,
+  //                                                        1000000,  //
+  //                                                        baudrate 1000); //
+  //                                                        timeout
+
+  // if (!is_servo_connected) {
+  //   display.getSpeechBalloon().setText("servo is not connected");
+  //   M5_LOGW("servo is not connected");
+  // } else {
+  //   display.getSpeechBalloon().setText("servo is connected");
+  //   M5_LOGD("servo is connected");
+  // }
+  // display.update();
+  // delay(1000);  // wait for servo to move
 
   // initial move
-  display.getSpeechBalloon().setText("moving to 400");
-  anim_controller.servo_driver.setTargetPosition(servo_pan_id, 400);
-  anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 400);
-  display.update();
-  delay(3000);  // wait for servo to move
-  display.getSpeechBalloon().setText("moving to 601");
-  anim_controller.servo_driver.setTargetPosition(servo_pan_id, 601);
-  anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 601);
-  display.update();
-  delay(3000);  // wait for servo to move
-  display.getSpeechBalloon().setText("moving to 511");
-  anim_controller.servo_driver.setTargetPosition(servo_pan_id, IDLE_POSITION);
-  anim_controller.servo_driver.setTargetPosition(servo_tilt_id, IDLE_POSITION);
-  display.update();
-  delay(3000);  // wait for servo to move
+  // if (is_servo_connected) {
+  //   anim_controller.joint_servo_map.set(botamochi::JointName::kHeadPan,
+  //                                       servo_pan_id);
+  //   anim_controller.joint_servo_map.set(botamochi::JointName::kHeadTilt,
+  //                                       servo_tilt_id);
+  //   display.getSpeechBalloon().setText("Scaning servos...");
+  //   for (size_t i = 1; i < 3; i++) {
+  //     bool b = anim_controller.servo_driver.ping(i);
+  //     anim_controller.servo_driver.getCurrentPosition(
+  //         i);  // execute determineServoType
+  //   }
+  //   display.getSpeechBalloon().setText("moving to 400");
+  //   anim_controller.servo_driver.setTargetPosition(servo_pan_id, 400);
+  //   anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 400);
+  //   display.update();
+  //   delay(3000);  // wait for servo to move
 
-  // register animation clips
-  anim_controller.setClip((unsigned short)AnimationName::kLookFront,
-                          botamochi::look_front_clip);
-  anim_controller.setClip((unsigned short)AnimationName::kLookUp,
-                          botamochi::look_up_clip);
-  anim_controller.setClip((unsigned short)AnimationName::kLookDown,
-                          botamochi::look_down_clip);
-  anim_controller.setClip((unsigned short)AnimationName::kLookLeft,
-                          botamochi::look_left_clip);
-  anim_controller.setClip((unsigned short)AnimationName::kLookRight,
-                          botamochi::look_right_clip);
-  anim_controller.setClip((unsigned short)AnimationName::kNod,
-                          botamochi::nod_clip);
-  anim_controller.setClip((unsigned short)AnimationName::kShake,
-                          botamochi::head_shake_clip);
+  //   display.getSpeechBalloon().setText("moving to 601");
+  //   anim_controller.servo_driver.setTargetPosition(servo_pan_id, 601);
+  //   anim_controller.servo_driver.setTargetPosition(servo_tilt_id, 601);
+  //   display.update();
+  //   delay(3000);  // wait for servo to move
+
+  //   display.getSpeechBalloon().setText("moving to 511");
+  //   anim_controller.servo_driver.setTargetPosition(servo_pan_id,
+  //   IDLE_POSITION);
+  //   anim_controller.servo_driver.setTargetPosition(servo_tilt_id,
+  //                                                  IDLE_POSITION);
+  //   display.update();
+  //   delay(3000);  // wait for servo to move
+  // }
+
+  // // register animation clips
+  // anim_controller.setClip((unsigned short)AnimationName::kLookFront,
+  //                         botamochi::look_front_clip);
+  // anim_controller.setClip((unsigned short)AnimationName::kLookUp,
+  //                         botamochi::look_up_clip);
+  // anim_controller.setClip((unsigned short)AnimationName::kLookDown,
+  //                         botamochi::look_down_clip);
+  // anim_controller.setClip((unsigned short)AnimationName::kLookLeft,
+  //                         botamochi::look_left_clip);
+  // anim_controller.setClip((unsigned short)AnimationName::kLookRight,
+  //                         botamochi::look_right_clip);
+  // anim_controller.setClip((unsigned short)AnimationName::kNod,
+  //                         botamochi::nod_clip);
+  // anim_controller.setClip((unsigned short)AnimationName::kShake,
+  //                         botamochi::head_shake_clip);
 
   // sprintf(balloon_text, "servo 01 pos: %d",
   //         anim_controller.servo_driver.getCurrentPosition(1));  // 14338???
@@ -240,36 +258,55 @@ void setup() {
   M5_LOGI("setting tasks...");
   // ## register tasks
   Tasks.setAutoErase(true);
-  // Tasks
-  // .add("M5_update",
-  //      [] {
-  //        //  M5.update();
-  //        //  if (M5.BtnA.wasPressed()) {
-  //        //    display.setFace(faces[face_idx]);
-  //        //    face_idx = (face_idx + 1) % faces_length;
-  //        //    display.setColorPalette(color_palettes[color_palettes_idx]);
-  //        //    color_palettes_idx =
-  //        //        (color_palettes_idx + 1) % color_palettes_size;
-  //        //  }
-  //        //  if (M5.BtnB.wasPressed()) {
-  //        //    display.getExpressionWeight().set(expressions[expression_idx],
-  //        //                                      255);
-  //        //    expression_idx = (expression_idx + 1) % expressions_size;
-  //        //  }
-  //        //  if (M5.BtnC.wasPressed()) {
-  //        //    anim_controller.play(anim_clip_id);
-  //        //    anim_clip_id = (anim_clip_id + 1) % 7;
-  //        //  }
+  Tasks
+      .add("M5_update",
+           [] {
+             M5.update();
+             if (M5.BtnA.wasPressed()) {
+               changeFace(1);
+             }
+             if (M5.BtnB.wasPressed()) {
+               changeExpression(1);
+             }
+             if (M5.BtnC.wasPressed()) {
+               anim_controller.play(anim_clip_id);
+               anim_clip_id = (anim_clip_id + 1) % 7;
+             }
 
-  //        //  if (m5_count % (100 * 60) == 0) {
-  //        //    auto i = random(7);
-  //        //    anim_controller.play(i);
-  //        //  }
+             if (M5.Touch.isEnabled()) {
+               auto t = M5.Touch.getDetail();
+               if (t.wasFlicked()) {
+                 auto dx = t.distanceX();
+                 auto dy = t.distanceY();
+                 // Flick right/left
+                 if (abs(dx) > 50 && abs(dx) > abs(dy)) {
+                   if (dx > 0) {
+                     changeExpression(1);
+                   } else {
+                     changeExpression(-1);
+                   }
+                 }
 
-  //        // random motion
-  //        m5_count += 1;
-  //      })
-  // ->startFps(100);
+                 // Flick up/down
+                 if (abs(dy) > 50 && abs(dy) > abs(dx)) {
+                   if (dy > 0) {
+                     changeFace(-1);
+                   } else {
+                     changeFace(1);  // change to next face on flick up
+                   }
+                 }
+               }
+             }
+
+             //  if (m5_count % (100 * 60) == 0) {
+             //    auto i = random(7);
+             //    anim_controller.play(i);
+             //  }
+
+             // random motion
+             m5_count += 1;
+           })
+      ->startFps(100);
   // Tasks
   //     .add("Clock",
   //          [] {
@@ -277,18 +314,17 @@ void setup() {
   //            stackchan_srv.timer_chr.writeValue(milli_sec);
   //          })
   //     ->startFps(60);
-  Tasks
-      .add("BLE_polling",
-           [] {
-             BLE.poll();
-             stackchan_srv.animationPoll(anim_controller);
-           })
-      ->startFps(10);
+  // Tasks
+  //     .add("BLE_polling",
+  //          [] {
+  //            BLE.poll();
+  //            stackchan_srv.animationPoll(anim_controller);
+  //          })
+  //     ->startFps(10);
   Tasks
       .add("Facial_Update",
            [] {
-             M5.update();
-             //  stackchan_srv.facePoll(display, faces, faces_length);
+             //  stackchan_srv.facePoll(display, faces, NUM_FACES);
              //  stackchan_srv.facialExpressionPoll(display, expressions,
              //                                     expressions_size);
              //  stackchan_srv.facialColorPoll(display, color_palettes,
@@ -299,20 +335,59 @@ void setup() {
            })
       ->startFps(30);
 
-  Tasks
-      .add("Animation_Update",
-           [] {
-             anim_controller.update();
-             stackchan_srv.servoPoll(anim_controller);
-           })
-      ->startFps(ANIMATION_FPS);
+  // Tasks
+  //     .add("Animation_Update",
+  //          [] {
+  //            anim_controller.update();
+  //            stackchan_srv.servoPoll(anim_controller);
+  //          })
+  //     ->startFps(ANIMATION_FPS);
 
   display.getSpeechBalloon().setText("");  // hide speech balloon
-  anim_controller.play((unsigned short)AnimationName::kNod);
+  // anim_controller.play((unsigned short)AnimationName::kNod);
+  if (!M5.Touch.isEnabled()) {
+    M5_LOGW("Touch is not enabled");
+  }
 }
 
 void loop() {
   Tasks.update();  // automatically execute tasks
 
   delay(1);
+}
+
+void changeFace(int8_t delta) {
+  if (delta == 0) {
+    return;
+  }
+
+  if (delta > 0 && face_idx == NUM_FACES - 1) {
+    face_idx = 0;
+  } else if (delta < 0 && face_idx == 0) {
+    face_idx = NUM_FACES - 1;
+  } else {
+    face_idx += delta;
+  }
+
+  display.setFace(faces[face_idx]);
+  display.setColorPalette(color_palettes[face_idx]);
+}
+
+void changeExpression(int8_t delta) {
+  if (delta == 0) {
+    return;
+  }
+
+  if (delta > 0 && expression_idx == expressions_size - 1) {
+    expression_idx = 0;
+  } else if (delta < 0 && expression_idx == 0) {
+    expression_idx = expressions_size - 1;
+  } else {
+    expression_idx += delta;
+  }
+  display.getExpressionWeight().setEmotionalExpression(
+      static_cast<stackchan::display::Expression>(
+          expression_idx %
+          (static_cast<int>(stackchan::display::Expression::kRelax) + 1)),
+      255);
 }

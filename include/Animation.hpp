@@ -266,8 +266,10 @@ class AnimationController {
   void play(unsigned short clip_id);
 };
 
-AnimationController::AnimationController(unsigned short fps)
-    : fps_(fps), last_written_positions_({IDLE_POSITION, IDLE_POSITION}) {}
+AnimationController::AnimationController(unsigned short fps) : fps_(fps) {
+  last_written_positions_[0] = IDLE_POSITION;
+  last_written_positions_[1] = IDLE_POSITION;
+}
 
 AnimationController::~AnimationController() {}
 
