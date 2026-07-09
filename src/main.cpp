@@ -1,3 +1,9 @@
+// NOTE: add the following definition in STS_ServoDriver.h to avoid the error
+// "error: 'UART_SCLK_DEFAULT' was not declared in this scope"
+// #ifndef
+// UART_SCLK_DEFAULT
+// #define UART_SCLK_DEFAULT UART_SCLK_APB
+// #endif
 
 #include <ArduinoBLE.h>
 #include <M5Unified.h>
@@ -103,12 +109,7 @@ void setup() {
 
   M5StackChan.begin();
 
-  M5.Log.setLogLevel(m5::log_target_serial, ESP_LOG_VERBOSE);
-  // Serial.begin(115200);
-  Serial2.begin(1000000, SERIAL_8N1, RXD, TXD);  // for servo driver
-  delay(1000);                                   // waiting for connection
-
-  // UART_NUM_1
+  // M5.Log.setLogLevel(m5::log_target_serial, ESP_LOG_VERBOSE);
 
   M5.Lcd.setBrightness(150);
   M5.Lcd.clear();
@@ -161,13 +162,6 @@ void setup() {
   //   M5_LOGD("BLE is available");
   // }
 
-  // if (!Serial2) {
-  //   display.getSpeechBalloon().setText("Serial2 is not connected");
-  //   M5_LOGW("Serial2 is not connected");
-  // } else {
-  //   M5_LOGD("Serial2 is connected");
-  // }
-
   // display.update();
 
   // // ## beginning Bluetooth setup
@@ -183,19 +177,6 @@ void setup() {
   // // start advertising
   // BLE.advertise();
 
-  // ## Servo setting
-  // is_servo_connected = anim_controller.servo_driver.init(&Serial2,
-  //                                                        1000000,  //
-  //                                                        baudrate 1000); //
-  //                                                        timeout
-
-  // if (!is_servo_connected) {
-  //   display.getSpeechBalloon().setText("servo is not connected");
-  //   M5_LOGW("servo is not connected");
-  // } else {
-  //   display.getSpeechBalloon().setText("servo is connected");
-  //   M5_LOGD("servo is connected");
-  // }
   // display.update();
   // delay(1000);  // wait for servo to move
 
@@ -265,10 +246,10 @@ void setup() {
                }
              }
 
-             //  if (m5_count % (100 * 60) == 0) {
-             //    auto i = random(7);
-             //    anim_controller.play(i);
-             //  }
+             if (m5_count % (100 * 60) == 0) {
+               auto i = random(7);
+               anim_controller.play(i);
+             }
 
              // random motion
              m5_count += 1;
@@ -303,16 +284,16 @@ void setup() {
            })
       ->startFps(30);
 
-  // Tasks
-  //     .add("Animation_Update",
-  //          [] {
-  //            anim_controller.update();
-  //            stackchan_srv.servoPoll(anim_controller);
-  //          })
-  //     ->startFps(ANIMATION_FPS);
+  Tasks
+      .add("Animation_Update",
+           [] {
+             anim_controller.update();
+             //  stackchan_srv.servoPoll(anim_controller);
+           })
+      ->startFps(ANIMATION_FPS);
 
   display.getSpeechBalloon().setText("");  // hide speech balloon
-  // anim_controller.play((unsigned short)AnimationName::kNod);
+  anim_controller.play((unsigned short)AnimationName::kNod);
   if (!M5.Touch.isEnabled()) {
     M5_LOGW("Touch is not enabled");
   }
