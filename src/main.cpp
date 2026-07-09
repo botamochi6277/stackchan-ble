@@ -1,7 +1,6 @@
 // NOTE: add the following definition in STS_ServoDriver.h to avoid the error
 // "error: 'UART_SCLK_DEFAULT' was not declared in this scope"
-// #ifndef
-// UART_SCLK_DEFAULT
+// #ifndef UART_SCLK_DEFAULT
 // #define UART_SCLK_DEFAULT UART_SCLK_APB
 // #endif
 
@@ -73,33 +72,10 @@ uint8_t face_idx = 0;
 
 ColorPalette* color_palettes[NUM_FACES];
 
-void assignMiaPalette(ColorPalette* palette) {
-  using stackchan::display::DrawingLocation;
-  palette->set(DrawingLocation::kIris1,
-               M5.Lcd.color24to16(0x4A99D9));  // iris 1, #4A99D9
-  palette->set(DrawingLocation::kEyelash, M5.Lcd.color24to16(0x953346));
-  palette->set(DrawingLocation::kEyelid,
-               M5.Lcd.color24to16(0x63436F));  // #63436F
-  palette->set(DrawingLocation::kIrisBackground, TFT_BLACK);
-  palette->set(DrawingLocation::kIris2,
-               M5.Lcd.color24to16(0xBFEDE8));  // iris2,#BFEDE8
-  palette->set(DrawingLocation::kPupil,
-               M5.Lcd.color24to16(0x2D493A));  // #2D493A
-  palette->set(DrawingLocation::kEyeHighlight, TFT_WHITE);
-  palette->set(DrawingLocation::kSkin,
-               M5.Lcd.color24to16(0xfac2a8));  // skin
-  palette->set(DrawingLocation::kEyeBrow,
-               M5.Lcd.color24to16(0x63434F));  // #63434F
-  palette->set(DrawingLocation::kMouthBackground, M5.Lcd.color24to16(0x63434F));
-  palette->set(DrawingLocation::kInnerMouth,
-               M5.Lcd.color24to16(0x8B0035));  // #8B0035
-  palette->set(DrawingLocation::kCheek1,
-               M5.Lcd.color24to16(0xd77398));  // cheek #d77398
-}
-
 void registerFaces();
 void changeFace(int8_t delta);
 void changeExpression(int8_t delta);
+void assignMiaPalette(ColorPalette* palette);
 
 void setup() {
   // please uncomment if you supply power from GROVE connector to the CORES3
@@ -339,4 +315,28 @@ void changeExpression(int8_t delta) {
           expression_idx %
           (static_cast<int>(stackchan::display::Expression::kRelax) + 1)),
       255);
+}
+
+void assignMiaPalette(ColorPalette* palette) {
+  using stackchan::display::DrawingLocation;
+  palette->set(DrawingLocation::kIris1,
+               M5.Lcd.color24to16(0x4A99D9));  // iris 1, #4A99D9
+  palette->set(DrawingLocation::kEyelash, M5.Lcd.color24to16(0x953346));
+  palette->set(DrawingLocation::kEyelid,
+               M5.Lcd.color24to16(0x63436F));  // #63436F
+  palette->set(DrawingLocation::kIrisBackground, TFT_BLACK);
+  palette->set(DrawingLocation::kIris2,
+               M5.Lcd.color24to16(0xBFEDE8));  // iris2,#BFEDE8
+  palette->set(DrawingLocation::kPupil,
+               M5.Lcd.color24to16(0x2D493A));  // #2D493A
+  palette->set(DrawingLocation::kEyeHighlight, TFT_WHITE);
+  palette->set(DrawingLocation::kSkin,
+               M5.Lcd.color24to16(0xfac2a8));  // skin
+  palette->set(DrawingLocation::kEyeBrow,
+               M5.Lcd.color24to16(0x63434F));  // #63434F
+  palette->set(DrawingLocation::kMouthBackground, M5.Lcd.color24to16(0x63434F));
+  palette->set(DrawingLocation::kInnerMouth,
+               M5.Lcd.color24to16(0x8B0035));  // #8B0035
+  palette->set(DrawingLocation::kCheek1,
+               M5.Lcd.color24to16(0xd77398));  // cheek #d77398
 }
