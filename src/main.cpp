@@ -1,4 +1,4 @@
-// NOTE: add the following definition in STS_ServoDriver.h to avoid the error
+// NOTE: add the following definition in SCSerial.cpp to avoid the error
 // "error: 'UART_SCLK_DEFAULT' was not declared in this scope"
 // #ifndef UART_SCLK_DEFAULT
 // #define UART_SCLK_DEFAULT UART_SCLK_APB
@@ -58,6 +58,8 @@ float time_sec = 0.0f;
 unsigned long milli_sec = 0U;
 unsigned long m5_count = 0;
 unsigned long main_count = 0;
+unsigned long last_touch_detected_time = 0;
+unsigned long last_facial_expression_changed_time = 0;
 
 const Expression expressions[] = {Expression::kNeutral, Expression::kSmile,
                                   Expression::kAngry,   Expression::kSad,
@@ -69,7 +71,6 @@ uint8_t expression_idx = 0;
 const uint8_t NUM_FACES = 4;
 Face* faces[NUM_FACES];
 uint8_t face_idx = 0;
-
 ColorPalette* color_palettes[NUM_FACES];
 
 void registerFaces();
@@ -125,8 +126,9 @@ void setup() {
   // assignPinkDemonPalette(color_palettes[4]);
 
   display.getCanvas().setColorDepth(8);  // start drawing w/ 8bit color mode
-  display.setColorPalette(color_palettes[0]);
-  display.setFace(faces[0]);
+  face_idx = 1;
+  display.setColorPalette(color_palettes[face_idx]);
+  display.setFace(faces[face_idx]);
   // display.getFace()->autoScale();
 
   // if (!BLE.begin()) {
@@ -209,6 +211,7 @@ void setup() {
                    } else {
                      changeExpression(-1);
                    }
+                   last_facial_expression_changed_time = millis();
                  }
 
                  // Flick up/down
@@ -222,9 +225,25 @@ void setup() {
                }
              }
 
+             auto& head_ts = M5StackChan.TouchSensor;
+
+             if (head_ts.wasClicked()) {
+               last_touch_detected_time = millis();
+               display.getExpressionWeight().setEmotionalExpression(
+                   stackchan::display::Expression::kSmile, 255);
+               last_facial_expression_changed_time = last_touch_detected_time;
+             }
+
              if (m5_count % (100 * 60) == 0) {
                auto i = random(7);
                anim_controller.play(i);
+             }
+
+             if (millis() - last_facial_expression_changed_time > 5000) {
+               // reset to neutral expression after 5 seconds of no touch
+               expression_idx = 0;
+               display.getExpressionWeight().setEmotionalExpression(
+                   stackchan::display::Expression::kNeutral, 255);
              }
 
              // random motion

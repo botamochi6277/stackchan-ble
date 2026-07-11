@@ -92,4 +92,11 @@ observations-->policy-->actions
 ```
 
 How to train the policy?
-To use imitation learning, reference motions are required. Someone should be stackchan during a few days
+To use imitation learning, reference motions are required. Someone should be stackchan during a few days.
+This is an approach from machine-learning.
+
+On the other hand, classical policy design is rule-based one such as state-machines and behavior trees.
+
+## References
+
+- [CoreS3 Arduino Program Compilation & Upload](https://docs.m5stack.com/en/arduino/m5cores3/program)
