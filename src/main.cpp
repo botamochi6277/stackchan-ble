@@ -113,7 +113,7 @@ void setup() {
   color_palettes[1] = new ColorPalette();
   assignLeonaPalette(color_palettes[1]);
   // ui
-  faces[2] = new stackchan::display::ToonFace1();
+  faces[2] = new stackchan::display::ToonFace2();
   color_palettes[2] = new ColorPalette();
   assignUiPalette(color_palettes[2]);
   // fbk
@@ -126,7 +126,7 @@ void setup() {
   // assignPinkDemonPalette(color_palettes[4]);
 
   display.getCanvas().setColorDepth(8);  // start drawing w/ 8bit color mode
-  face_idx = 1;
+  face_idx = 2;
   display.setColorPalette(color_palettes[face_idx]);
   display.setFace(faces[face_idx]);
   // display.getFace()->autoScale();
